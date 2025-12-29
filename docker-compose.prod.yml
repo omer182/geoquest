@@ -2,10 +2,7 @@ version: '3.8'
 
 services:
   frontend:
-    image: omer182/geoquest-frontend:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/omer182/geoquest-frontend:latest
     ports:
       - "3000:80"
     environment:
@@ -17,10 +14,7 @@ services:
       - geoquest-network
 
   backend:
-    image: omer182/geoquest-backend:latest
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ghcr.io/omer182/geoquest-backend:latest
     ports:
       - "3001:3001"
     environment:
