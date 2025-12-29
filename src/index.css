@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ensure polylines render above ALL map layers including GeoJSON */
+.leaflet-pane.leaflet-overlay-pane {
+  z-index: 650 !important;
+}
+
+.leaflet-pane.leaflet-overlay-pane svg {
+  position: relative !important;
+  z-index: 650 !important;
+}
+
+.leaflet-pane.leaflet-overlay-pane svg path {
+  position: relative !important;
+  z-index: 650 !important;
+  transition: opacity 1.5s ease-out !important;
+}
+
+/* Fade-in animation for distance line */
+.distance-line-draw {
+  animation: fadeInLine 0.8s ease-out forwards;
+}
+
+@keyframes fadeInLine {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Distance label on the line */
+.distance-label-container {
+  background: transparent !important;
+  border: none !important;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.distance-label {
+  background: #1e293b;
+  color: #22d3ee;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  border: 2px solid #22d3ee;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+  text-align: center;
+}

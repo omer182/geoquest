@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # Backend WebSocket server
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: geoquest-backend
+    ports:
+      - "3001:3001"
+    volumes:
+      # Mount backend source code for live editing
+      - ./backend:/app
+      # Preserve node_modules in container
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    env_file:
+      - ./backend/.env
+    networks:
+      - geoquest-network
+    restart: unless-stopped
+
+  # Frontend React application
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: geoquest-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      # Mount frontend source code for live editing
+      - ./:/app
+      # Preserve node_modules in container
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    env_file:
+      - .env
+    depends_on:
+      - backend
+    networks:
+      - geoquest-network
+    restart: unless-stopped
+
+networks:
+  geoquest-network:
+    driver: bridge

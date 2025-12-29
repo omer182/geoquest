@@ -1,0 +1,40 @@
+{
+  "name": "geoquest-backend",
+  "version": "0.0.1",
+  "description": "GeoQuest WebSocket server for real-time multiplayer gameplay",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "build": "tsc && cp dist/services/RoomManager.js services/ && cp dist/types/socket-events.js types/",
+    "lint": "eslint src/**/*.js",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run"
+  },
+  "keywords": [
+    "websocket",
+    "socket.io",
+    "multiplayer",
+    "geography",
+    "game"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "@vitest/ui": "^4.0.16",
+    "eslint": "^9.17.0",
+    "nodemon": "^3.1.9",
+    "socket.io-client": "^4.8.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.16"
+  }
+}
