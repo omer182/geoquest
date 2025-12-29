@@ -1,25 +1,14 @@
 version: '3.8'
 
 services:
-  frontend:
-    image: ghcr.io/omer182/geoquest-frontend:latest
-    ports:
-      - "3000:80"
-    environment:
-      - NODE_ENV=production
-    depends_on:
-      - backend
-    restart: unless-stopped
-    networks:
-      - geoquest-network
-
   backend:
     image: ghcr.io/omer182/geoquest-backend:latest
+    container_name: geoquest-backend
     ports:
       - "3001:3001"
     environment:
       - PORT=3001
-      - CORS_ORIGIN=http://localhost:3000
+      - CORS_ORIGIN=http://frontend
       - NODE_ENV=production
     restart: unless-stopped
     networks:
@@ -30,6 +19,20 @@ services:
       timeout: 3s
       retries: 3
       start_period: 5s
+
+  frontend:
+    image: ghcr.io/omer182/geoquest-frontend:latest
+    container_name: geoquest-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - geoquest-network
 
 networks:
   geoquest-network:
