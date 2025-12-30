@@ -255,7 +255,8 @@ export function WebSocketProvider({ children }: WebSocketProviderProps): JSX.Ele
    */
   useEffect(() => {
     // Get WebSocket URL from environment
-    const socketUrl = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:3001';
+    // Empty string means same origin (works with nginx proxy in production)
+    const socketUrl = import.meta.env.VITE_WEBSOCKET_URL || '';
 
     // Check for existing session ID in sessionStorage
     const existingSessionId = sessionStorage.getItem(SESSION_STORAGE_KEY);

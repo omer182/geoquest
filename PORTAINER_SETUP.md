@@ -1,7 +1,5 @@
 # GeoQuest - Portainer Deployment Guide
 
-Complete guide for deploying GeoQuest on your HP EliteDesk 800 Linux server using Portainer.
-
 ---
 
 ## 📋 Prerequisites
@@ -66,26 +64,20 @@ services:
     image: ghcr.io/omer182/geoquest-backend:latest
     container_name: geoquest-backend
     ports:
-      - "3001:3001"
+      - "5001:5001"
     environment:
-      - PORT=3001
+      - PORT=5001
       - CORS_ORIGIN=http://frontend
       - NODE_ENV=production
     restart: unless-stopped
     networks:
       - geoquest-network
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 5s
 
   frontend:
     image: ghcr.io/omer182/geoquest-frontend:latest
     container_name: geoquest-frontend
     ports:
-      - "3000:80"
+      - "5000:80"
     environment:
       - NODE_ENV=production
     depends_on:
@@ -113,12 +105,12 @@ networks:
 Open your browser and navigate to:
 
 ```
-http://YOUR_SERVER_IP:3000
+http://YOUR_SERVER_IP:5000
 ```
 
 **Example:**
-- `http://192.168.1.100:3000` (replace with your HP EliteDesk IP)
-- `http://homeserver.local:3000` (if you have local DNS)
+- `http://192.168.1.100:5000` (replace with your HP EliteDesk IP)
+- `http://homeserver.local:5000` (if you have local DNS)
 
 ### Find Your Server IP
 
@@ -185,7 +177,7 @@ Or manually:
 3. View **Logs** tab
 
 **Common issues:**
-- Port 3000 or 3001 already in use
+- Port 5000 or 5001 already in use
 - Images not pulled (ensure they're public)
 
 ### Can't access from browser
@@ -193,8 +185,8 @@ Or manually:
 **Check firewall:**
 ```bash
 # On HP EliteDesk, allow ports
-sudo ufw allow 3000
-sudo ufw allow 3001
+sudo ufw allow 5000
+sudo ufw allow 5001
 ```
 
 **Verify containers are running:**
@@ -206,7 +198,7 @@ docker ps | grep geoquest
 
 The backend must respond on `/health` endpoint. Check:
 ```bash
-curl http://localhost:3001/health
+curl http://localhost:5001/health
 ```
 
 Should return: `{"status":"ok"}`
@@ -219,8 +211,8 @@ Should return: `{"status":"ok"}`
 
 | Service  | Internal Port | External Port | Protocol |
 |----------|---------------|---------------|----------|
-| Frontend | 80            | 3000          | HTTP     |
-| Backend  | 3001          | 3001          | HTTP/WS  |
+| Frontend | 80            | 5000          | HTTP     |
+| Backend  | 5001          | 5001          | HTTP/WS  |
 
 ### Container Names
 
