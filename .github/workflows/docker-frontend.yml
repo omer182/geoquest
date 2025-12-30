@@ -61,6 +61,8 @@ jobs:
           push: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VITE_WEBSOCKET_URL=http://homeserver.local:5001
           cache-from: |
             type=gha
             type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache

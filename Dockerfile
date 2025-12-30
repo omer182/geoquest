@@ -1,5 +1,5 @@
 # Production Dockerfile for Frontend
-FROM node:20-alpine AS builder
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -12,19 +12,15 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the application with backend URL pointing to same origin
-ENV VITE_WEBSOCKET_URL=
+# Build the application - WebSocket URL will be provided at build time
+ARG VITE_WEBSOCKET_URL
+ENV VITE_WEBSOCKET_URL=${VITE_WEBSOCKET_URL}
 RUN npm run build
 
-# Production stage - serve with nginx
-FROM nginx:alpine
+# Install serve to run the production build
+RUN npm install -g serve
 
-# Copy built assets
-COPY --from=builder /app/dist /usr/share/nginx/html
+EXPOSE 5000
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
+# Serve the built app on port 5000
+CMD ["serve", "-s", "dist", "-l", "5000"]
