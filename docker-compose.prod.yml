@@ -8,7 +8,7 @@ services:
       - "5001:5001"
     environment:
       - PORT=5001
-      - CORS_ORIGIN=http://frontend
+      - CORS_ORIGIN=https://geoquest.omersher.com
       - NODE_ENV=production
     restart: unless-stopped
     networks:
@@ -24,7 +24,7 @@ services:
     image: ghcr.io/omer182/geoquest-frontend:latest
     container_name: geoquest-frontend
     ports:
-      - "5000:80"
+      - "5000:5000"
     environment:
       - NODE_ENV=production
     depends_on:
@@ -36,4 +36,5 @@ services:
 
 networks:
   geoquest-network:
-    driver: bridge
+    external: true
+    name: proxy
