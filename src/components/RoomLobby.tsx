@@ -96,15 +96,46 @@ export default function RoomLobby({ onGameStart, onLeave }: RoomLobbyProps) {
     onLeave();
   }, [dispatch, onLeave]);
 
-  const handleCopyRoomCode = () => {
+  const handleCopyRoomCode = async () => {
     if (!currentRoom) return;
 
     // Copy shareable link
     const shareableLink = `${window.location.origin}${window.location.pathname}?room=${currentRoom.code}`;
-    navigator.clipboard.writeText(shareableLink);
 
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
+    try {
+      // Try modern Clipboard API first (requires HTTPS)
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareableLink);
+      } else {
+        // Fallback for HTTP or older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = shareableLink;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+          document.execCommand('copy');
+        } catch (err) {
+          console.error('Fallback copy failed:', err);
+          // Show link in a prompt as last resort
+          prompt('Copy this link:', shareableLink);
+          return;
+        } finally {
+          document.body.removeChild(textArea);
+        }
+      }
+
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      // Show link in a prompt as fallback
+      prompt('Copy this link:', shareableLink);
+    }
   };
 
   const handleToggleReady = () => {
