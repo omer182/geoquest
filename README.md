@@ -40,7 +40,7 @@ cd backend && npm run dev
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:5000](http://localhost:5000)
 
 ## Development
 
@@ -48,14 +48,14 @@ Open [http://localhost:3000](http://localhost:3000)
 
 **Frontend (.env)**
 ```env
-VITE_WEBSOCKET_URL=ws://localhost:3001
+VITE_WEBSOCKET_URL=http://localhost:5001
 VITE_MAP_PROVIDER=leaflet
 ```
 
 **Backend (backend/.env)**
 ```env
-PORT=3001
-CORS_ORIGIN=http://localhost:3000
+PORT=5001
+CORS_ORIGIN=http://localhost:5000
 NODE_ENV=development
 ```
 
@@ -63,7 +63,7 @@ NODE_ENV=development
 
 **Frontend**
 ```bash
-npm run dev          # Start dev server (port 3000)
+npm run dev          # Start dev server (port 5000)
 npm run build        # Build for production
 npm run preview      # Preview production build
 npm run lint         # Run ESLint

@@ -176,14 +176,14 @@ Duration: ~200ms
 
 **Frontend (.env):**
 ```env
-VITE_WEBSOCKET_URL=http://localhost:3001  # Socket.IO server URL
+VITE_WEBSOCKET_URL=http://localhost:5001  # Socket.IO server URL
 VITE_MAP_PROVIDER=leaflet                  # Map provider
 VITE_MAP_API_KEY=                          # Mapbox key (optional)
 ```
 
 **Backend (backend/.env):**
 ```env
-PORT=3001                                  # Server port
+PORT=5001                                  # Server port
 CORS_ORIGIN=http://localhost:5173         # Frontend origin
 NODE_ENV=development                       # Environment mode
 ```

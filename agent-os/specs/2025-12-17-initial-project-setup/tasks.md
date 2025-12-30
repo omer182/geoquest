@@ -107,7 +107,7 @@ This breakdown establishes the complete development foundation for GeoQuest with
     - Initialize Socket.IO with CORS configuration
     - Add basic connection handler: `io.on('connection', (socket) => {...})`
     - Log connection/disconnection events
-    - Listen on PORT from environment (default 3001)
+    - Listen on PORT from environment (default 5001)
   - [x] 3.5 Configure backend package.json scripts
     - Add script: `"dev": "nodemon src/server.js"` (or ts-node if TypeScript)
     - Add script: `"start": "node src/server.js"`
@@ -168,7 +168,7 @@ This breakdown establishes the complete development foundation for GeoQuest with
 - [x] 5.0 Configure environment variables for frontend and backend
   - [x] 5.1 Create frontend .env.example file
     - Create `.env.example` in project root:
-    - Add: `VITE_WEBSOCKET_URL=ws://localhost:3001` with comment explaining WebSocket server URL
+    - Add: `VITE_WEBSOCKET_URL=ws://localhost:5001` with comment explaining WebSocket server URL
     - Add: `VITE_MAP_PROVIDER=leaflet` with comment: "Choice between 'leaflet' or 'mapbox'"
     - Add: `VITE_MAP_API_KEY=` with comment: "Required only if VITE_MAP_PROVIDER=mapbox"
     - Include setup instructions in comments
@@ -178,7 +178,7 @@ This breakdown establishes the complete development foundation for GeoQuest with
     - Verify `.env` is in `.gitignore` (already added in Task Group 1)
   - [x] 5.3 Create backend .env.example file
     - Create `/backend/.env.example`:
-    - Add: `PORT=3001` with comment explaining WebSocket server port
+    - Add: `PORT=5001` with comment explaining WebSocket server port
     - Add: `CORS_ORIGIN=http://localhost:5173` with comment about frontend dev server origin
     - Include setup instructions in comments
   - [x] 5.4 Create backend .env file for local development
@@ -272,7 +272,7 @@ This breakdown establishes the complete development foundation for GeoQuest with
     - Copy package files first: `COPY package*.json ./`
     - Run: `RUN npm install`
     - Copy source code: `COPY . .`
-    - Expose port: `EXPOSE 3001`
+    - Expose port: `EXPOSE 5001`
     - Start dev server: `CMD ["npm", "run", "dev"]` (using nodemon)
   - [x] 7.3 Create docker-compose.yml for multi-container setup
     - Create `docker-compose.yml` in project root:
@@ -284,7 +284,7 @@ This breakdown establishes the complete development foundation for GeoQuest with
       - Depends on: `backend`
     - Define `backend` service:
       - Build context: `./backend`, dockerfile: `Dockerfile.dev`
-      - Ports: `"3001:3001"`
+      - Ports: `"5001:5001"`
       - Volumes: `./backend:/app`, `/app/node_modules`
       - Environment variables from `/backend/.env` file
     - Create shared network for service communication
@@ -364,7 +364,7 @@ This breakdown establishes the complete development foundation for GeoQuest with
     - Future: List planned additions (map library, testing framework)
   - [x] 8.10 Add troubleshooting section
     - Section: "Troubleshooting"
-    - Issue: Port conflicts (5173 or 3001 already in use) - Solution: Kill process or change port
+    - Issue: Port conflicts (5173 or 5001 already in use) - Solution: Kill process or change port
     - Issue: Docker networking errors - Solution: Check Docker daemon, restart Docker
     - Issue: WebSocket connection failures - Solution: Verify backend running, check CORS config
     - Issue: Hot reload not working - Solution: Check volume mounts in docker-compose.yml

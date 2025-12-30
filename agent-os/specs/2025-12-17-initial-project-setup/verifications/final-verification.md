@@ -253,7 +253,7 @@ docker-compose config
 **Details:**
 - Both frontend and backend services properly configured
 - Volume mounts for live code editing
-- Port mappings: 5173 (frontend), 3001 (backend)
+- Port mappings: 5173 (frontend), 5001 (backend)
 - Environment variables loaded from .env files
 - Shared network for inter-service communication
 - Only warning: deprecated `version` field (non-critical)

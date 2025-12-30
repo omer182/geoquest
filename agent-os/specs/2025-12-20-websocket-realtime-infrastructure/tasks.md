@@ -410,12 +410,12 @@ Estimated Total Complexity: Large (L)
 - [x] 7.0 Complete environment variable configuration
   - [x] 7.1 Update .env.example for frontend
     - File: `.env.example` (completed)
-    - Add VITE_WEBSOCKET_URL with default value ws://localhost:3001
+    - Add VITE_WEBSOCKET_URL with default value ws://localhost:5001
     - Add comment explaining ws:// for local dev, wss:// for production
-    - Add comment for Docker setup: ws://backend:3001
+    - Add comment for Docker setup: ws://backend:5001
   - [ ] 7.2 Update .env.example for backend
     - File: `backend/.env.example`
-    - Add PORT with default value 3001
+    - Add PORT with default value 5001
     - Add CORS_ORIGIN with default value http://localhost:5173
     - Add NODE_ENV with default value development
     - Add comments explaining each variable's purpose

@@ -198,7 +198,7 @@ The following enhancements were made to polish the single-player experience:
 ### Testing & Quality
 - **Backend Tests**: 12/12 GameSessionManager tests passing
 - **Build Status**: Frontend builds in ~1s with no errors
-- **Backend Server**: Running stable on port 3001
+- **Backend Server**: Running stable on port 5001
 - **Manual Testing**: Full multiplayer flow verified
 - **Production Ready**: All features complete and functional
 

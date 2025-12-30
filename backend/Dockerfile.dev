@@ -14,7 +14,7 @@ RUN npm install
 COPY . .
 
 # Expose WebSocket server port
-EXPOSE 3001
+EXPOSE 5001
 
 # Start backend dev server with nodemon for auto-restart
 CMD ["npm", "run", "dev"]

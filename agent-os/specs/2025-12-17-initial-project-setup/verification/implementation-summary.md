@@ -140,7 +140,7 @@ The Initial Project Setup specification has been fully implemented. The GeoQuest
 
 **Docker Services:**
 - Frontend service: Port 5173, Node.js 20 Alpine, Vite dev server
-- Backend service: Port 3001, Node.js 20 Alpine, Express + Socket.IO server
+- Backend service: Port 5001, Node.js 20 Alpine, Express + Socket.IO server
 - Shared network for service communication
 
 ### Task Group 8: Comprehensive Documentation

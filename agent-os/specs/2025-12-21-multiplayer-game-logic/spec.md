@@ -15,7 +15,7 @@ This specification has been **fully implemented** with all core and enhanced fea
 - All enhanced features: ✅ Complete
 - Recent bug fixes: ✅ Complete (mobile overlap, backend server crash)
 - Build status: ✅ Successful (frontend: 1.00s, backend: running)
-- Backend server: ✅ Running without errors (port 3001)
+- Backend server: ✅ Running without errors (port 5001)
 - Production readiness: ✅ Ready
 
 ---
@@ -481,7 +481,7 @@ All items have been manually tested and verified:
 
 **Implementation is production-ready:**
 - All builds successful (frontend: 1.00s, backend: running)
-- Backend server running without errors (port 3001)
+- Backend server running without errors (port 5001)
 - No console errors or WebSocket disconnections during gameplay
 - Multiplayer game flow feels smooth and responsive (< 200ms latency for events)
 - Mobile view (375px width) displays correctly without horizontal scrolling

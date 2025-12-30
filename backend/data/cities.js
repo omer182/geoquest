@@ -586,14 +586,14 @@ function selectRandomCities(difficulty, count = 5) {
   // Map difficulty to level ranges
   let levelRange;
   if (difficulty === 'easy') {
-    // Easy: levels 1-3 (famous, well-known cities)
-    levelRange = [1, 2, 3];
+    // Easy: levels 1-2 (world-famous mega-cities and major international cities)
+    levelRange = [1, 2];
   } else if (difficulty === 'hard') {
-    // Hard: levels 8-10 (obscure, challenging cities)
-    levelRange = [8, 9, 10];
+    // Hard: levels 6-10 (provincial capitals to obscure cities)
+    levelRange = [6, 7, 8, 9, 10];
   } else {
-    // Medium: levels 4-7 (moderately known cities)
-    levelRange = [4, 5, 6, 7];
+    // Medium: levels 3-5 (important regional capitals to regional centers)
+    levelRange = [3, 4, 5];
   }
 
   // Collect all cities from the level range

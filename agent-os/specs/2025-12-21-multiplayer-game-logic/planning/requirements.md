@@ -214,7 +214,7 @@ This document captures the requirements for Phase 5: Multiplayer Game Logic, inc
 **Testing**: Manual testing recommended (optional automated tests)
 **Documentation**: Updated (spec.md, tasks.md, IMPLEMENTATION_STATUS.md)
 **Build**: Successful (frontend: 1.00s, backend: running)
-**Server**: Running (port 3001, no errors)
+**Server**: Running (port 5001, no errors)
 
 ---
 

@@ -8,7 +8,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: geoquest-backend
     ports:
-      - "3001:3001"
+      - "5001:5001"
     volumes:
       # Mount backend source code for live editing
       - ./backend:/app
@@ -29,7 +29,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: geoquest-frontend
     ports:
-      - "5173:5173"
+      - "5000:5000"
     volumes:
       # Mount frontend source code for live editing
       - ./:/app

@@ -94,9 +94,9 @@ Build the foundational Socket.IO WebSocket infrastructure to enable reliable rea
 - Clicking indicator when ERROR shows retry button to manually attempt reconnection
 
 **Environment Variable Configuration**
-- Add VITE_WEBSOCKET_URL to .env.example with default ws://localhost:3001 for local development
-- Add PORT and CORS_ORIGIN to backend/.env.example with defaults 3001 and http://localhost:5173
-- Document WebSocket URL configuration in README for Docker (ws://backend:3001) vs local setup
+- Add VITE_WEBSOCKET_URL to .env.example with default ws://localhost:5001 for local development
+- Add PORT and CORS_ORIGIN to backend/.env.example with defaults 5001 and http://localhost:5173
+- Document WebSocket URL configuration in README for Docker (ws://backend:5001) vs local setup
 - Support both ws:// and wss:// protocols for local development and production deployment
 - Validate environment variables on server startup, log warning if CORS_ORIGIN not set
 

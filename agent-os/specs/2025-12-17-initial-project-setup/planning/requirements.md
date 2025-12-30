@@ -102,12 +102,12 @@ No similar existing features identified for reference. This is a greenfield proj
 
 #### Environment Configuration
 - **Frontend Environment Variables** (`.env` file with Vite prefix):
-  - `VITE_WEBSOCKET_URL`: Backend WebSocket server URL (e.g., `ws://localhost:3001` for dev)
+  - `VITE_WEBSOCKET_URL`: Backend WebSocket server URL (e.g., `ws://localhost:5001` for dev)
   - `VITE_MAP_PROVIDER`: Choice between `leaflet` or `mapbox` for map rendering
   - `VITE_MAP_API_KEY`: API key for Mapbox (if `VITE_MAP_PROVIDER=mapbox`)
 
 - **Backend Environment Variables** (separate `.env` in `/backend`):
-  - `PORT`: WebSocket server port (default: 3001)
+  - `PORT`: WebSocket server port (default: 5001)
   - `CORS_ORIGIN`: Allowed CORS origin for frontend (default: `http://localhost:5173` for Vite dev)
 
 #### Docker Development Setup
@@ -125,7 +125,7 @@ No similar existing features identified for reference. This is a greenfield proj
 - **Dockerfile (Backend)**: Development-oriented Node.js container
   - Based on Node.js LTS image
   - Install dependencies and run Express + Socket.IO server
-  - Expose port 3001 for WebSocket connections
+  - Expose port 5001 for WebSocket connections
 
 #### Package Scripts
 - **Frontend Scripts** (`package.json`):

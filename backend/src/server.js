@@ -9,7 +9,7 @@ import { registerSocketHandlers, getRoomStats } from './handlers/socketHandlers.
 dotenv.config();
 
 // Validate required environment variables
-const PORT = parseInt(process.env.PORT || '3001', 10);
+const PORT = parseInt(process.env.PORT || '5001', 10);
 const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
 const nodeEnv = process.env.NODE_ENV || 'development';
 

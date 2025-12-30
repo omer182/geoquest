@@ -25,7 +25,7 @@ Establish a complete development foundation for GeoQuest, a mobile-first geograp
 - Socket.IO integration for real-time multiplayer communication (foundation only, no game logic yet)
 - Backend folder structure: `/backend/src` for server code, organized for future scalability
 - Package.json scripts: `dev` (nodemon for auto-restart on changes), `start` (production server), `lint` (ESLint for backend)
-- Express server configured to listen on configurable port (default 3001) with CORS enabled for frontend origin
+- Express server configured to listen on configurable port (default 5001) with CORS enabled for frontend origin
 - Basic Socket.IO connection handler to verify WebSocket handshake works
 - Separate TypeScript or JavaScript configuration for backend (aligned with team preference)
 
@@ -49,9 +49,9 @@ Establish a complete development foundation for GeoQuest, a mobile-first geograp
 - Editor configuration hints (.editorconfig) for consistent formatting across IDEs
 
 **Environment Variable Configuration**
-- Frontend .env file (not committed to git) with VITE_ prefixed variables: `VITE_WEBSOCKET_URL` (backend WebSocket URL, default ws://localhost:3001), `VITE_MAP_PROVIDER` (choice between 'leaflet' or 'mapbox'), `VITE_MAP_API_KEY` (Mapbox API key if provider is mapbox)
+- Frontend .env file (not committed to git) with VITE_ prefixed variables: `VITE_WEBSOCKET_URL` (backend WebSocket URL, default ws://localhost:5001), `VITE_MAP_PROVIDER` (choice between 'leaflet' or 'mapbox'), `VITE_MAP_API_KEY` (Mapbox API key if provider is mapbox)
 - Frontend .env.example file (committed to git) with placeholder values and comments explaining each variable
-- Backend .env file (not committed) with: `PORT` (WebSocket server port, default 3001), `CORS_ORIGIN` (allowed frontend origin, default http://localhost:5173)
+- Backend .env file (not committed) with: `PORT` (WebSocket server port, default 5001), `CORS_ORIGIN` (allowed frontend origin, default http://localhost:5173)
 - Backend .env.example file with placeholder values and setup instructions
 - TypeScript type definitions for import.meta.env to provide autocomplete for environment variables
 - Vite configuration to load environment variables and make them available via import.meta.env
@@ -59,7 +59,7 @@ Establish a complete development foundation for GeoQuest, a mobile-first geograp
 **Docker Development Environment**
 - docker-compose.yml file defining multi-container development setup with frontend and backend services
 - Frontend Dockerfile (Dockerfile.dev in root) based on Node.js 20 LTS, copying package files first for layer caching, running npm install, exposing port 5173, starting Vite dev server with --host flag for Docker networking
-- Backend Dockerfile (backend/Dockerfile.dev) based on Node.js 20 LTS, similar layer caching strategy, exposing port 3001, starting backend dev server with nodemon
+- Backend Dockerfile (backend/Dockerfile.dev) based on Node.js 20 LTS, similar layer caching strategy, exposing port 5001, starting backend dev server with nodemon
 - Volume mounts for live code editing: frontend source code, backend source code, node_modules volumes to preserve installed packages
 - Docker network configuration for frontend-to-backend communication using service names
 - Environment variables passed from .env files to containers in docker-compose.yml
