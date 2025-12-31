@@ -266,15 +266,18 @@ export class GameSession {
   /**
    * Start the round timer
    * @param {Function} onTimerExpire - Callback when timer expires
+   * @param {number} [customDuration] - Optional custom duration in seconds (overrides default)
    */
-  startRoundTimer(onTimerExpire) {
+  startRoundTimer(onTimerExpire, customDuration) {
     // Clear any existing timer
     this.clearRoundTimer();
 
-    // Use configurable timerDuration instead of hardcoded 30 seconds
+    // Use custom duration if provided, otherwise use default timerDuration
+    const duration = customDuration !== undefined ? customDuration : this.timerDuration;
+
     this.roundTimer = setTimeout(() => {
       onTimerExpire();
-    }, this.timerDuration * 1000);
+    }, duration * 1000);
   }
 
   /**

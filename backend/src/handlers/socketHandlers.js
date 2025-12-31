@@ -330,8 +330,6 @@ export function registerSocketHandlers(socket, io) {
       setTimeout(() => {
         const currentCity = gameSession.getCurrentCity();
         const currentRound = 1;
-        // Use 5 seconds for final round (round 5), otherwise use configured duration
-        const roundTimerDuration = currentRound === 5 ? 5 : timerDuration;
 
         io.to(request.roomCode).emit('round:started', {
           roomCode: request.roomCode,
@@ -341,13 +339,13 @@ export function registerSocketHandlers(socket, io) {
             country: currentCity.country,
           },
           startTime,
-          timerDuration: roundTimerDuration,
+          timerDuration: timerDuration,
         });
 
         // Start server-side timer for auto-completion
         gameSession.startRoundTimer(() => {
           handleRoundTimerExpiration(io, request.roomCode, gameSession);
-        });
+        }, timerDuration);
       }, 100);
 
       if (callback) {
@@ -559,9 +557,7 @@ export function registerSocketHandlers(socket, io) {
             // Start first round immediately
             const startTime = gameSession.startRound();
 
-            // Use 5 seconds for final round (round 5), otherwise use configured duration
             const currentRound = 1;
-            const roundTimerDuration = currentRound === 5 ? 5 : timerDuration;
 
             // Broadcast round start with timer
             io.to(request.roomCode).emit('game:roundStarted', {
@@ -572,7 +568,7 @@ export function registerSocketHandlers(socket, io) {
                 country: cities[currentRound - 1].country,
               },
               startTime,
-              timerDuration: roundTimerDuration,
+              timerDuration: timerDuration,
             });
           }
         }, 1000);
@@ -768,9 +764,6 @@ function startAutoAdvanceCountdown(io, roomCode, gameSession) {
         const startTime = gameSession.startRound();
         const currentCity = gameSession.getCurrentCity();
 
-        // Use 5 seconds for final round (round 5), otherwise use configured duration
-        const roundTimerDuration = gameSession.currentRound === 5 ? 5 : gameSession.timerDuration;
-
         io.to(roomCode).emit('round:started', {
           roomCode,
           roundNumber: gameSession.currentRound,
@@ -779,13 +772,13 @@ function startAutoAdvanceCountdown(io, roomCode, gameSession) {
             country: currentCity.country,
           },
           startTime,
-          timerDuration: roundTimerDuration,
+          timerDuration: gameSession.timerDuration,
         });
 
-        // Start round timer
+        // Start round timer - all rounds use the configured timer duration
         gameSession.startRoundTimer(() => {
           handleRoundTimerExpiration(io, roomCode, gameSession);
-        });
+        }, gameSession.timerDuration);
       }
     }
   }, 1000);
