@@ -10,8 +10,13 @@ dotenv.config();
 
 // Validate required environment variables
 const PORT = parseInt(process.env.PORT || '5001', 10);
-const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
+const corsOriginEnv = process.env.CORS_ORIGIN || 'http://localhost:5173';
 const nodeEnv = process.env.NODE_ENV || 'development';
+
+// Parse CORS origins - support comma-separated list or single origin
+const corsOrigin = corsOriginEnv.includes(',')
+  ? corsOriginEnv.split(',').map(origin => origin.trim())
+  : corsOriginEnv;
 
 // Warn if using defaults
 if (!process.env.CORS_ORIGIN) {
