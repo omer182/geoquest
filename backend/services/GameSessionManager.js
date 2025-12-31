@@ -149,13 +149,14 @@ export class GameSession {
 
   /**
    * Calculate results for the current round
-   * @returns {Array<{playerId: string, playerName: string, guess: {lat: number, lng: number}, distance: number, score: number}>}
+   * @returns {Array<{playerId: string, playerName: string, guess: {lat: number, lng: number}, distance: number, score: number, totalScore: number}>}
    */
   calculateRoundResults() {
     const results = [];
 
     this.roundGuesses.forEach((guessData, socketId) => {
       const player = this.playerData.get(socketId);
+      const playerScore = this.playerScores.get(socketId);
       if (player) {
         results.push({
           playerId: socketId,
@@ -163,11 +164,12 @@ export class GameSession {
           guess: guessData.guess,
           distance: guessData.distance,
           score: guessData.score,
+          totalScore: playerScore?.totalScore || 0, // Include cumulative total score
         });
       }
     });
 
-    // Sort by score (descending)
+    // Sort by round score (descending)
     results.sort((a, b) => b.score - a.score);
 
     return results;
