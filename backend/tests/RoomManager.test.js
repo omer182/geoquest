@@ -32,7 +32,7 @@ describe('RoomManager', () => {
       expect(parseInt(room.code)).toBeGreaterThanOrEqual(10000);
       expect(parseInt(room.code)).toBeLessThanOrEqual(99999);
       expect(room.players).toHaveLength(1);
-      expect(room.maxPlayers).toBe(2);
+      expect(room.maxPlayers).toBe(5);
       expect(room.status).toBe('waiting');
     });
 
@@ -105,10 +105,15 @@ describe('RoomManager', () => {
     });
 
     it('should throw error when room is full', () => {
+      // Fill room to capacity (5 players total)
       roomManager.joinRoom(roomCode, 'Player2', 'socket-2');
+      roomManager.joinRoom(roomCode, 'Player3', 'socket-3');
+      roomManager.joinRoom(roomCode, 'Player4', 'socket-4');
+      roomManager.joinRoom(roomCode, 'Player5', 'socket-5');
 
+      // Try to add 6th player
       expect(() => {
-        roomManager.joinRoom(roomCode, 'Player3', 'socket-3');
+        roomManager.joinRoom(roomCode, 'Player6', 'socket-6');
       }).toThrow('full');
     });
 
@@ -327,6 +332,80 @@ describe('RoomManager', () => {
       roomManager.destroy();
 
       expect(clearIntervalSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('5-Player Capacity', () => {
+    it('should create room with default maxPlayers of 5', () => {
+      const room = roomManager.createRoom('Host', 'host-socket');
+
+      expect(room.maxPlayers).toBe(5);
+      expect(room.players).toHaveLength(1);
+    });
+
+    it('should accept 5th player successfully', () => {
+      const room = roomManager.createRoom('Host', 'host-socket');
+      const roomCode = room.code;
+
+      // Add players 2-5
+      roomManager.joinRoom(roomCode, 'Player2', 'socket-2');
+      roomManager.joinRoom(roomCode, 'Player3', 'socket-3');
+      roomManager.joinRoom(roomCode, 'Player4', 'socket-4');
+      const { room: fullRoom } = roomManager.joinRoom(roomCode, 'Player5', 'socket-5');
+
+      expect(fullRoom.players).toHaveLength(5);
+      expect(fullRoom.players[4].name).toBe('Player5');
+      expect(fullRoom.players[4].id).toBe('socket-5');
+    });
+
+    it('should reject 6th player with ROOM_FULL error code', () => {
+      const room = roomManager.createRoom('Host', 'host-socket');
+      const roomCode = room.code;
+
+      // Fill room with 5 players
+      roomManager.joinRoom(roomCode, 'Player2', 'socket-2');
+      roomManager.joinRoom(roomCode, 'Player3', 'socket-3');
+      roomManager.joinRoom(roomCode, 'Player4', 'socket-4');
+      roomManager.joinRoom(roomCode, 'Player5', 'socket-5');
+
+      // Try to add 6th player
+      try {
+        roomManager.joinRoom(roomCode, 'Player6', 'socket-6');
+        // Should not reach here
+        expect(true).toBe(false);
+      } catch (error) {
+        expect(error.code).toBe('ROOM_FULL');
+        expect(error.message).toContain('full');
+      }
+    });
+
+    it('should verify all 5 players must be ready before game starts', () => {
+      const room = roomManager.createRoom('Host', 'host-socket');
+      const roomCode = room.code;
+
+      // Add 4 more players
+      roomManager.joinRoom(roomCode, 'Player2', 'socket-2');
+      roomManager.joinRoom(roomCode, 'Player3', 'socket-3');
+      roomManager.joinRoom(roomCode, 'Player4', 'socket-4');
+      roomManager.joinRoom(roomCode, 'Player5', 'socket-5');
+
+      // Set first 4 players ready
+      roomManager.setPlayerReady(roomCode, 'host-socket', true);
+      roomManager.setPlayerReady(roomCode, 'socket-2', true);
+      roomManager.setPlayerReady(roomCode, 'socket-3', true);
+      roomManager.setPlayerReady(roomCode, 'socket-4', true);
+
+      const roomBeforeLast = roomManager.getRoom(roomCode);
+      const allReadyBeforeLast = roomBeforeLast.players.every((p) => p.isReady);
+      expect(allReadyBeforeLast).toBe(false);
+
+      // Set 5th player ready
+      roomManager.setPlayerReady(roomCode, 'socket-5', true);
+
+      const finalRoom = roomManager.getRoom(roomCode);
+      const allReadyFinal = finalRoom.players.every((p) => p.isReady);
+      expect(allReadyFinal).toBe(true);
+      expect(finalRoom.players).toHaveLength(5);
     });
   });
 });

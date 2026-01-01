@@ -579,7 +579,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                       playerId: result.playerId,
                       playerName: result.playerName,
                       guess: result.guess,
-                      color: ['#3b82f6', '#10b981', '#a855f7', '#f97316'][index % 4],
+                      color: ['#3b82f6', '#10b981', '#a855f7', '#f97316', '#eab308'][index % 5],
                       distance: result.distance,
                     }))
                   : undefined
@@ -623,15 +623,11 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                 />
               )}
 
-            {/* Waiting Indicator (after player submits but opponent hasn't) */}
+            {/* Waiting Indicator (after player submits but others haven't) */}
             {state.gameMode === 'multiplayer' &&
               state.gameStatus === GameStatus.GUESSING &&
               state.multiplayerGameState?.hasGuessed && (
-                <WaitingIndicator
-                  opponentName={
-                    state.currentRoom?.players.find((p) => p.id !== state.currentPlayer?.id)?.name || 'opponent'
-                  }
-                />
+                <WaitingIndicator />
               )}
 
             {/* Level Announcement (shows first during GUESSING) */}

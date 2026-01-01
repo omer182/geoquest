@@ -40,7 +40,7 @@ export default function CreateRoom({ onRoomCreated, onBack }: CreateRoomProps) {
 
     socket.emit(
       SOCKET_EVENTS.CREATE_ROOM,
-      { playerName: playerName.trim(), maxPlayers: 2 },
+      { playerName: playerName.trim(), maxPlayers: 5 },
       (response) => {
         setIsCreating(false);
 

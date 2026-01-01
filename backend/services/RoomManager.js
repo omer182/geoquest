@@ -51,7 +51,7 @@ export class RoomManager {
     /**
      * Create a new room
      */
-    createRoom(playerName, socketId, maxPlayers = 2) {
+    createRoom(playerName, socketId, maxPlayers = 5) {
         const roomCode = this.generateRoomCode();
         const now = Date.now();
         const host = {

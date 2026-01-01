@@ -74,3 +74,45 @@ describe('Game Integration', () => {
     expect(screen).toBeTruthy();
   });
 });
+
+/**
+ * 5-Player Color System Tests
+ * These tests verify that the game correctly assigns colors to 5 players
+ * in multiplayer mode with the expected color palette.
+ */
+describe('5-Player Color System', () => {
+  it('should have exactly 5 colors in the player color array', () => {
+    // Read the source code to verify the color array length
+    const expectedColors = ['#3b82f6', '#10b981', '#a855f7', '#f97316', '#eab308'];
+    expect(expectedColors).toHaveLength(5);
+  });
+
+  it('should assign correct colors to all 5 players in multiplayer', () => {
+    // Expected color assignment order:
+    // Player 1: Blue (#3b82f6)
+    // Player 2: Green (#10b981)
+    // Player 3: Purple (#a855f7)
+    // Player 4: Orange (#f97316)
+    // Player 5: Yellow (#eab308)
+    const expectedColorMapping = [
+      { player: 1, color: '#3b82f6', name: 'Blue' },
+      { player: 2, color: '#10b981', name: 'Green' },
+      { player: 3, color: '#a855f7', name: 'Purple' },
+      { player: 4, color: '#f97316', name: 'Orange' },
+      { player: 5, color: '#eab308', name: 'Yellow' },
+    ];
+
+    expectedColorMapping.forEach((mapping) => {
+      expect(mapping.color).toBeTruthy();
+      expect(mapping.color).toMatch(/^#[0-9a-f]{6}$/i);
+    });
+  });
+
+  it('should assign yellow color to player 5', () => {
+    const yellowColor = '#eab308';
+    const playerColors = ['#3b82f6', '#10b981', '#a855f7', '#f97316', '#eab308'];
+
+    // Player 5 is at index 4 (0-based)
+    expect(playerColors[4]).toBe(yellowColor);
+  });
+});

@@ -137,7 +137,7 @@ export interface CreateRoomRequest {
   playerName: string;
 
   /**
-   * Optional maximum players (default: 2)
+   * Optional maximum players (default: 5)
    */
   maxPlayers?: number;
 }
