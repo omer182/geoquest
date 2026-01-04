@@ -55,7 +55,7 @@ export function registerSocketHandlers(socket, io) {
       const room = roomManager.createRoom(
         request.playerName,
         socket.id,
-        request.maxPlayers || 2
+        request.maxPlayers || 5
       );
 
       const player = room.players[0];

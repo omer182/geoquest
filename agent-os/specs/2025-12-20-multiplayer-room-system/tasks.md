@@ -419,7 +419,7 @@ useSocketEvent(SOCKET_EVENTS.ROOM_CREATED, (data: RoomCreatedResponse) => {
 // Emit events
 socket.emit(SOCKET_EVENTS.CREATE_ROOM, {
   playerName: 'Player1',
-  maxPlayers: 2
+  maxPlayers: 5
 });
 ```
 
