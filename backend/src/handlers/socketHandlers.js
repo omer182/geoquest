@@ -473,6 +473,7 @@ export function registerSocketHandlers(socket, io) {
       // Check if all players are ready
       if (gameSession.areAllPlayersReady()) {
         console.log(`[Socket] All players ready in room ${request.roomCode}, advancing to next round`);
+        console.log(`[Socket] Current round: ${gameSession.currentRound}, Total rounds: ${gameSession.totalRounds}`);
 
         // Clear any existing countdown interval and timer
         gameSession.clearCountdownInterval();
@@ -483,6 +484,8 @@ export function registerSocketHandlers(socket, io) {
           roomCode: request.roomCode,
           nextRound: gameSession.currentRound + 1,
         });
+
+        console.log(`[Socket] About to call advanceToNextRound for room ${request.roomCode}`);
 
         // Advance to next round or complete game
         advanceToNextRound(io, request.roomCode, gameSession);
@@ -812,17 +815,22 @@ function startAutoAdvanceCountdown(io, roomCode, gameSession) {
 
     // Check if countdown reached 0
     if (countdown <= 0) {
+      console.log(`[Countdown] Timer reached 0 for room ${roomCode}`);
       gameSession.clearCountdownInterval();
 
       // Check if all players are ready (clicked continue) before timer expired
       if (!gameSession.areAllPlayersReady()) {
         // Timer expired, emit round:all_ready with partial readiness
-        console.log(`[Socket] Round timer expired in room ${roomCode}, advancing with partial readiness`);
+        console.log(`[Countdown] Round timer expired in room ${roomCode}, advancing with partial readiness`);
         io.to(roomCode).emit(SOCKET_EVENTS.ROUND_ALL_READY, {
           roomCode,
           nextRound: gameSession.currentRound + 1,
         });
+      } else {
+        console.log(`[Countdown] All players already ready in room ${roomCode}`);
       }
+
+      console.log(`[Countdown] About to call advanceToNextRound for room ${roomCode}`);
 
       // Advance to next round or complete game
       advanceToNextRound(io, roomCode, gameSession);
@@ -838,9 +846,12 @@ function startAutoAdvanceCountdown(io, roomCode, gameSession) {
  * Helper: Advance to next round or complete game
  */
 function advanceToNextRound(io, roomCode, gameSession) {
+  console.log(`[advanceToNextRound] Called for room ${roomCode}, current round: ${gameSession.currentRound}, total: ${gameSession.totalRounds}`);
+
   // Check if game is complete
   if (gameSession.currentRound >= gameSession.totalRounds) {
     // Game complete
+    console.log(`[advanceToNextRound] Game complete for room ${roomCode}`);
     const { finalStandings, winner } = gameSession.getFinalStandings();
 
     io.to(roomCode).emit(SOCKET_EVENTS.GAME_COMPLETE, {
@@ -856,9 +867,12 @@ function advanceToNextRound(io, roomCode, gameSession) {
     }
   } else {
     // Advance to next round
+    console.log(`[advanceToNextRound] Advancing to next round for room ${roomCode}`);
     gameSession.advanceRound();
     const startTime = gameSession.startRound();
     const currentCity = gameSession.getCurrentCity();
+
+    console.log(`[advanceToNextRound] Emitting round:started for round ${gameSession.currentRound}, city: ${currentCity.name}`);
 
     io.to(roomCode).emit('round:started', {
       roomCode,
