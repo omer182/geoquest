@@ -210,6 +210,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
 
   /**
    * Listen to game:started event
+   * Handles both initial game start and rematch auto-start
    */
   useSocketEvent<{
     roomCode: string;
@@ -222,6 +223,13 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
     if (state.gameMode !== 'multiplayer') return;
 
     console.log('[Game] Game started event received', data);
+
+    // Clear rematch countdown state if present
+    setRematchCountdown(null);
+    setCurrentGuess(null);
+
+    // Force map reset to ensure clean state
+    setMapKey((prev) => prev + 1);
 
     dispatch({
       type: 'MULTIPLAYER_GAME_STARTED',
@@ -238,13 +246,13 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   });
 
   /**
-   * Listen to round:start event
+   * Listen to round:started event (emitted by backend)
    */
   useSocketEvent<{
     roundNumber: number;
     startTime: number;
     timerDuration: number;
-  }>('round:start', (data) => {
+  }>('round:started', (data) => {
     if (state.gameMode !== 'multiplayer') return;
 
     console.log('[Game] Round started', data);
@@ -260,6 +268,21 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
 
     // Show animated city prompt for new round
     setShowAnimatedPrompt(true);
+  });
+
+  /**
+   * Listen to round:all_ready event (when all players click continue)
+   */
+  useSocketEvent<{
+    roomCode: string;
+    nextRound: number;
+  }>('round:all_ready', (data) => {
+    if (state.gameMode !== 'multiplayer') return;
+
+    console.log('[Game] All players ready, advancing round', data);
+
+    // The backend will emit round:started next, which will handle the state update
+    // This event just lets us know everyone is ready
   });
 
   /**
@@ -285,7 +308,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   });
 
   /**
-   * Listen to game:round_complete event
+   * Listen to game:roundComplete event (camelCase matches backend SOCKET_EVENTS.GAME_ROUND_COMPLETE)
    */
   useSocketEvent<{
     roundNumber: number;
@@ -297,7 +320,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
     };
     results: any[];
     standings: any[];
-  }>('game:round_complete', (data) => {
+  }>('game:roundComplete', (data) => {
     if (state.gameMode !== 'multiplayer') return;
 
     console.log('[Game] Round complete', data);
@@ -360,7 +383,19 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   useSocketEvent<{ playerId: string; playerName: string }>('player:disconnected', (data) => {
     if (state.gameMode !== 'multiplayer') return;
 
-    console.log('[Game] Player disconnected', data);
+    console.log('[Game] Player disconnected event received:', {
+      data,
+      currentPlayerId: socket?.id,
+      isCurrentPlayer: data.playerId === socket?.id,
+      gameStatus: state.gameStatus,
+    });
+
+    // CRITICAL FIX: Don't show disconnected modal for yourself!
+    // This was causing both players to see the modal when the game started
+    if (data.playerId === socket?.id) {
+      console.log('[Game] Ignoring disconnect event for current player');
+      return;
+    }
 
     setDisconnectedPlayerName(data.playerName);
     setShowDisconnectedModal(true);
@@ -395,40 +430,9 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   });
 
   /**
-   * Listen to game:started event
-   * Handle auto-start after rematch countdown
+   * REMOVED: Duplicate game:started listener
+   * This was causing double event firing. The primary listener at line ~214 handles all game starts.
    */
-  useSocketEvent<{
-    roomCode: string;
-    difficulty: string;
-    timerDuration: number;
-    cities: any[];
-    roundNumber: number;
-    totalRounds: number;
-  }>('game:started', (data) => {
-    if (state.gameMode !== 'multiplayer') return;
-
-    console.log('[Game] Game auto-started after rematch countdown');
-
-    // Clear countdown state
-    setRematchCountdown(null);
-    setCurrentGuess(null);
-    setShowAnimatedPrompt(true);
-
-    // Force map reset
-    setMapKey((prev) => prev + 1);
-
-    // Initialize new game state
-    dispatch({
-      type: 'MULTIPLAYER_GAME_STARTED',
-      payload: {
-        cities: data.cities,
-        difficulty: data.difficulty as 'easy' | 'medium' | 'hard',
-        timerDuration: data.timerDuration,
-        totalRounds: data.totalRounds,
-      },
-    });
-  });
 
   /**
    * Listen to rematch:statusUpdated event
@@ -474,7 +478,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   const handleMultiplayerTimeUp = () => {
     console.log('[Game] Multiplayer timer expired');
     // Timer expiration is handled by the server
-    // Server will emit game:round_complete when time is up
+    // Server will emit game:roundComplete when time is up
   };
 
   /**
@@ -670,6 +674,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                       countdown={state.multiplayerGameState.autoAdvanceCountdown}
                       roundScore={state.multiplayerGameState.roundResults.find(r => r.playerId === state.currentPlayer?.id)?.score || 0}
                       totalScore={state.multiplayerGameState.standings.find(s => s.playerId === state.currentPlayer?.id)?.totalScore || 0}
+                      roomCode={state.currentRoom?.code || ''}
                     />
                   </div>
                 </div>
