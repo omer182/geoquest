@@ -875,12 +875,7 @@ function advanceToNextRound(io, roomCode, gameSession) {
     console.log(`[advanceToNextRound] Emitting round:started for round ${gameSession.currentRound}, city: ${currentCity.name}`);
 
     io.to(roomCode).emit('round:started', {
-      roomCode,
       roundNumber: gameSession.currentRound,
-      cityTarget: {
-        name: currentCity.name,
-        country: currentCity.country,
-      },
       startTime,
       timerDuration: gameSession.timerDuration,
     });
