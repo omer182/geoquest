@@ -62,12 +62,10 @@ export default function MultiplayerRoundResults({
     return () => clearInterval(interval);
   }, []);
 
-  // Reset continue state when countdown changes (new round)
+  // Reset continue state only when round number changes (new round)
   useEffect(() => {
-    if (countdown !== null) {
-      setHasClickedContinue(false);
-    }
-  }, [countdown]);
+    setHasClickedContinue(false);
+  }, [roundNumber]);
 
   // Handle continue button click
   const handleContinue = () => {
@@ -185,10 +183,6 @@ export default function MultiplayerRoundResults({
         {/* Your Score Summary */}
         <div className="bg-dark-surface rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 mb-2">
           <div className="flex items-center justify-between text-[11px] sm:text-xs">
-            <span className="text-gray-300">Round Points:</span>
-            <span className="font-bold text-green-400">+{formatNumber(roundScore)}</span>
-          </div>
-          <div className="flex items-center justify-between text-[11px] sm:text-xs mt-0.5 sm:mt-1">
             <span className="text-gray-300">Total Score:</span>
             <span className="font-bold text-white text-sm sm:text-base">{formatNumber(totalScore)}</span>
           </div>

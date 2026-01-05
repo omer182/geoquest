@@ -804,14 +804,14 @@ function startAutoAdvanceCountdown(io, roomCode, gameSession) {
 
   // Store the interval in the game session so it can be cleared
   gameSession.countdownInterval = setInterval(() => {
+    // Emit the current countdown value
     io.to(roomCode).emit('countdown:tick', {
       roundNumber: gameSession.currentRound,
       remainingSeconds: countdown,
     });
 
-    countdown--;
-
-    if (countdown < 0) {
+    // Check if countdown reached 0
+    if (countdown <= 0) {
       gameSession.clearCountdownInterval();
 
       // Check if all players are ready (clicked continue) before timer expired
@@ -826,7 +826,11 @@ function startAutoAdvanceCountdown(io, roomCode, gameSession) {
 
       // Advance to next round or complete game
       advanceToNextRound(io, roomCode, gameSession);
+      return;
     }
+
+    // Decrement for next tick
+    countdown--;
   }, 1000);
 }
 
