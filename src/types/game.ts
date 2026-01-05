@@ -46,9 +46,11 @@ export interface Guess {
 export interface PlayerRoundResult {
   playerId: string;
   playerName: string;
-  guess: Guess;
-  distance: number;
+  guess: Guess | null;
+  distance: number | null;
   score: number;
+  timeBonus?: number;
+  totalScore?: number;
 }
 
 /**
@@ -193,7 +195,7 @@ export interface AdvanceLevelAction {
 }
 
 /**
- * Action to retry the current level after failing to meet threshold.
+ * Action to retry the current level after failure.
  */
 export interface RetryLevelAction {
   type: 'RETRY_LEVEL';

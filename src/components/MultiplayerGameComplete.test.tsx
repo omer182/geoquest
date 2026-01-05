@@ -1,4 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
+// Mock canvas-confetti
+vi.mock('canvas-confetti', () => ({
+  default: vi.fn(),
+}));
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import MultiplayerGameComplete from './MultiplayerGameComplete';
 import { PlayerFinalStats, PlayerStanding } from '../types/game';
@@ -155,5 +160,143 @@ describe('MultiplayerGameComplete - 5 Player Support', () => {
     // Check for ready indicators (checkmarks)
     const checkmarks = screen.getAllByText('✓');
     expect(checkmarks.length).toBe(3); // 3 players ready
+  });
+});
+
+describe('MultiplayerGameComplete - Final Summary Enhancements', () => {
+  const mockPlayers = [
+    { id: 'player1', name: 'Alice' },
+    { id: 'player2', name: 'Bob' },
+    { id: 'player3', name: 'Charlie' },
+  ];
+
+  const mockFinalStandings: PlayerFinalStats[] = [
+    {
+      playerId: 'player1',
+      playerName: 'Alice',
+      totalScore: 5000,
+      averageDistance: 150,
+      bestRound: 1500,
+    },
+    {
+      playerId: 'player2',
+      playerName: 'Bob',
+      totalScore: 3000,
+      averageDistance: 250,
+      bestRound: 1000,
+    },
+    {
+      playerId: 'player3',
+      playerName: 'Charlie',
+      totalScore: 2000,
+      averageDistance: 350,
+      bestRound: 800,
+    },
+  ];
+
+  const mockWinner: PlayerStanding = {
+    playerId: 'player1',
+    playerName: 'Alice',
+    score: 5000,
+  };
+
+  const defaultProps = {
+    finalStandings: mockFinalStandings,
+    winner: mockWinner,
+    currentPlayerId: 'player2',
+    rematchRequests: new Set<string>(),
+    allPlayers: mockPlayers,
+    onPlayAgain: vi.fn(),
+    onLeaveRoom: vi.fn(),
+    hasRequestedRematch: false,
+    rematchCountdown: null,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders gradient background matching MainMenu aesthetic', () => {
+    const { container } = render(<MultiplayerGameComplete {...defaultProps} />);
+
+    // Check for gradient background class on main container
+    const mainContainer = container.querySelector('.bg-gradient-to-br');
+    expect(mainContainer).toBeInTheDocument();
+
+    // Check for gradient colors from MainMenu pattern
+    expect(mainContainer?.className).toMatch(/from-slate-900/);
+    expect(mainContainer?.className).toMatch(/via-blue-950/);
+    expect(mainContainer?.className).toMatch(/to-slate-900/);
+  });
+
+  it('renders animated orbs for background decoration', () => {
+    const { container } = render(<MultiplayerGameComplete {...defaultProps} />);
+
+    // Check for animated orbs (floating background elements)
+    const orbs = container.querySelectorAll('.animate-float');
+    expect(orbs.length).toBeGreaterThan(0);
+
+    // Check for blur effect on orbs
+    const blurredOrbs = container.querySelectorAll('.blur-3xl');
+    expect(blurredOrbs.length).toBeGreaterThan(0);
+  });
+
+  it('triggers confetti for winner only', async () => {
+    const confetti = (await import('canvas-confetti')).default;
+
+    // Render as winner
+    render(<MultiplayerGameComplete {...defaultProps} currentPlayerId="player1" />);
+
+    // Wait for confetti to be called (1 second delay + buffer)
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+
+    // Confetti should be called for winner
+    expect(confetti).toHaveBeenCalled();
+  });
+
+  it('does not trigger confetti for non-winners', async () => {
+    const confetti = (await import('canvas-confetti')).default;
+    vi.clearAllMocks();
+
+    // Render as non-winner (player2)
+    render(<MultiplayerGameComplete {...defaultProps} currentPlayerId="player2" />);
+
+    // Wait for potential confetti call
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+
+    // Confetti should NOT be called for non-winner
+    expect(confetti).not.toHaveBeenCalled();
+  });
+
+  it('uses standardized font colors - text-white for primary text', () => {
+    render(<MultiplayerGameComplete {...defaultProps} />);
+
+    // Check that player names use text-white
+    const aliceElement = screen.getByText(/Alice/);
+    expect(aliceElement.className).toMatch(/text-white/);
+  });
+
+  it('uses standardized font colors - text-gray-300 for secondary text', () => {
+    const { container } = render(<MultiplayerGameComplete {...defaultProps} />);
+
+    // Check for secondary text colors (labels, descriptions)
+    const secondaryElements = container.querySelectorAll('.text-gray-300');
+    expect(secondaryElements.length).toBeGreaterThan(0);
+  });
+
+  it('uses success color (text-green-400) for winner and ready status', () => {
+    const { container } = render(<MultiplayerGameComplete {...defaultProps} />);
+
+    // Check for success/green color in winner's card or ready status
+    const successElements = container.querySelectorAll('.text-green-400, .bg-green-500, .border-green-500');
+    expect(successElements.length).toBeGreaterThan(0);
+  });
+
+  it('uses semi-transparent card backgrounds with backdrop blur', () => {
+    const { container } = render(<MultiplayerGameComplete {...defaultProps} />);
+
+    // Check for semi-transparent backgrounds on inner card
+    const transparentBgs = container.querySelectorAll('[class*="bg-slate-800/50"], [class*="backdrop-blur"]');
+    expect(transparentBgs.length).toBeGreaterThan(0);
   });
 });

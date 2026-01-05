@@ -18,6 +18,7 @@ interface GameHeaderProps {
  *
  * Displays the current level and round information at the top of the game interface.
  * Format: "Level [X] - Round [Y]/5"
+ * Optimized for mobile with responsive text sizes to prevent overlap at 390px width.
  *
  * @example
  * ```tsx
@@ -27,9 +28,9 @@ interface GameHeaderProps {
  */
 export default function GameHeader({ level, round }: GameHeaderProps) {
   return (
-    <header className="bg-gradient-to-r from-teal-600 to-blue-600 text-white py-4 px-6 shadow-md">
+    <header className="bg-gradient-to-r from-teal-600 to-blue-600 text-white py-2 sm:py-3 md:py-4 px-3 sm:px-4 md:px-6 shadow-md">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-xl font-bold text-center sm:text-2xl">
+        <h1 className="text-sm sm:text-lg md:text-xl lg:text-2xl font-bold text-center text-white">
           Level {level} - Round {round}/5
         </h1>
       </div>

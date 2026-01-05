@@ -32,6 +32,7 @@ interface CityPromptProps {
  * Can show with or without animation:
  * - With animation: Fades in at center, stays briefly, then flies up to top
  * - Without animation: Static display at top of screen
+ * Optimized for mobile with text truncation for long city/country names.
  *
  * @example
  * ```tsx
@@ -90,22 +91,22 @@ export default function CityPrompt({
       className={`fixed z-50 pointer-events-none transition-all duration-700 ease-in-out ${
         isCentered
           ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'
-          : 'top-4 right-4 translate-x-0 translate-y-0'
+          : 'top-2 sm:top-4 right-2 sm:right-4 translate-x-0 translate-y-0'
       } ${
         animationPhase === 'fadeIn' ? 'opacity-0' : 'opacity-100'
       }`}
     >
       <div
         className={`bg-dark-elevated rounded-xl shadow-2xl border-2 border-primary transition-all duration-700 ease-out ${
-          isSmall ? 'p-3 px-6' : 'p-8'
+          isSmall ? 'p-2 px-3 sm:p-3 sm:px-6' : 'p-6 sm:p-8'
         }`}
       >
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-1 sm:space-y-2">
           <div
             className={`font-semibold transition-all duration-700 ease-out ${
               isSmall
-                ? 'text-lg text-primary inline'
-                : 'text-3xl md:text-5xl text-white block'
+                ? 'text-sm sm:text-lg text-primary inline truncate max-w-[140px] sm:max-w-none'
+                : 'text-2xl sm:text-3xl md:text-5xl text-white block'
             }`}
           >
             {cityName}
@@ -113,8 +114,8 @@ export default function CityPrompt({
           <div
             className={`transition-all duration-700 ease-out ${
               isSmall
-                ? 'text-base text-gray-300 inline'
-                : 'text-2xl md:text-4xl text-gray-400 block'
+                ? 'text-xs sm:text-base text-gray-300 inline truncate max-w-[100px] sm:max-w-none'
+                : 'text-xl sm:text-2xl md:text-4xl text-gray-400 block'
             }`}
           >
             {isSmall && ', '}

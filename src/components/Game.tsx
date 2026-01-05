@@ -198,33 +198,56 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   useEffect(() => {
     if (state.gameMode === 'multiplayer' && state.gameStatus === GameStatus.READY) {
       // Auto-start the game with cities already in state OR select new ones
-      if (state.selectedCities.length > 0) {
-        // Cities already provided by game:started event
-        dispatch({ type: 'START_GAME', payload: { cities: state.selectedCities } });
-      } else {
-        // Fallback: select cities locally (should not happen in Phase 5)
+      if (state.selectedCities.length === 0) {
         const cities = selectCitiesForLevel(1);
-        dispatch({ type: 'START_GAME', payload: { cities } });
+        dispatch({
+          type: 'START_GAME',
+          payload: { cities },
+        });
       }
-      // Skip level announcement for multiplayer - go straight to guessing
-      setShowLevelAnnouncement(false);
-      setShowAnimatedPrompt(true);
     }
-  }, [state.gameMode, state.gameStatus, state.selectedCities, dispatch]);
-
-  // ========== MULTIPLAYER SOCKET EVENT LISTENERS ==========
+  }, [state.gameMode, state.gameStatus, state.selectedCities.length, dispatch]);
 
   /**
-   * Listen to round:started event
-   * Server sends this when all players are ready for a new round
+   * Listen to game:started event
+   */
+  useSocketEvent<{
+    roomCode: string;
+    difficulty: string;
+    timerDuration: number;
+    cities: any[];
+    roundNumber: number;
+    totalRounds: number;
+  }>('game:started', (data) => {
+    if (state.gameMode !== 'multiplayer') return;
+
+    console.log('[Game] Game started event received', data);
+
+    dispatch({
+      type: 'MULTIPLAYER_GAME_STARTED',
+      payload: {
+        cities: data.cities,
+        difficulty: data.difficulty as 'easy' | 'medium' | 'hard',
+        timerDuration: data.timerDuration,
+        totalRounds: data.totalRounds,
+      },
+    });
+
+    // Show animated city prompt for multiplayer
+    setShowAnimatedPrompt(true);
+  });
+
+  /**
+   * Listen to round:start event
    */
   useSocketEvent<{
     roundNumber: number;
     startTime: number;
     timerDuration: number;
-    cityTarget: { name: string; country: string; latitude: number; longitude: number };
-  }>('round:started', (data) => {
+  }>('round:start', (data) => {
     if (state.gameMode !== 'multiplayer') return;
+
+    console.log('[Game] Round started', data);
 
     dispatch({
       type: 'MULTIPLAYER_ROUND_START',
@@ -235,48 +258,49 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
       },
     });
 
-    // Reset map to clear previous round's pins
-    setMapKey(prev => prev + 1);
-    setCurrentGuess(null);
-
-    // Show city animation for new round
-    setShowLevelAnnouncement(false); // Skip level announcement in multiplayer
-    setShowAnimatedPrompt(true); // Show animated city prompt
+    // Show animated city prompt for new round
+    setShowAnimatedPrompt(true);
   });
 
   /**
-   * Listen to player:guessed event
-   * Server broadcasts when any player submits their guess
+   * Listen to game:player_guessed event
    */
-  useSocketEvent<{ playerId: string; playerName: string; hasGuessed: boolean }>(
-    'player:guessed',
-    (data) => {
-      if (state.gameMode !== 'multiplayer') return;
+  useSocketEvent<{
+    playerId: string;
+    playerName: string;
+    hasGuessed: boolean;
+  }>('game:player_guessed', (data) => {
+    if (state.gameMode !== 'multiplayer') return;
 
-      dispatch({
-        type: 'MULTIPLAYER_PLAYER_GUESSED',
-        payload: { playerId: data.playerId, playerName: data.playerName, hasGuessed: data.hasGuessed },
-      });
-    }
-  );
+    console.log('[Game] Player guessed', data);
+
+    dispatch({
+      type: 'MULTIPLAYER_PLAYER_GUESSED',
+      payload: {
+        playerId: data.playerId,
+        playerName: data.playerName,
+        hasGuessed: data.hasGuessed,
+      },
+    });
+  });
 
   /**
-   * Listen to game:roundComplete event
-   * Server sends this when all players have submitted guesses
+   * Listen to game:round_complete event
    */
   useSocketEvent<{
     roundNumber: number;
-    targetCity: { name: string; country: string; lat: number; lng: number };
-    results: Array<{
-      playerId: string;
-      playerName: string;
-      guess: { lat: number; lng: number };
-      distance: number;
-      score: number;
-    }>;
-    standings: Array<{ playerId: string; playerName: string; totalScore: number }>;
-  }>('game:roundComplete', (data) => {
+    targetCity: {
+      name: string;
+      country: string;
+      lat: number;
+      lng: number;
+    };
+    results: any[];
+    standings: any[];
+  }>('game:round_complete', (data) => {
     if (state.gameMode !== 'multiplayer') return;
+
+    console.log('[Game] Round complete', data);
 
     dispatch({
       type: 'MULTIPLAYER_ROUND_COMPLETE',
@@ -287,44 +311,35 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
         standings: data.standings,
       },
     });
+
+    // Clear current guess
+    setCurrentGuess(null);
   });
 
   /**
-   * Listen to countdown:tick event
-   * Server sends countdown ticks (5, 4, 3, 2, 1) for auto-advance
+   * Listen to game:countdown_tick event for auto-advance countdown
    */
-  useSocketEvent<{ roundNumber: number; remainingSeconds: number }>(
-    'countdown:tick',
-    (data) => {
-      if (state.gameMode !== 'multiplayer') return;
+  useSocketEvent<{ remainingSeconds: number }>('game:countdown_tick', (data) => {
+    if (state.gameMode !== 'multiplayer') return;
 
-      dispatch({
-        type: 'MULTIPLAYER_COUNTDOWN_TICK',
-        payload: { remainingSeconds: data.remainingSeconds },
-      });
-    }
-  );
+    dispatch({
+      type: 'MULTIPLAYER_COUNTDOWN_TICK',
+      payload: {
+        remainingSeconds: data.remainingSeconds,
+      },
+    });
+  });
 
   /**
    * Listen to game:complete event
-   * Server sends this after the final round (round 5)
    */
   useSocketEvent<{
-    roomCode: string;
-    finalStandings: Array<{
-      playerId: string;
-      playerName: string;
-      totalScore: number;
-      averageDistance: number;
-      roundScores: number[];
-    }>;
-    winner: {
-      playerId: string;
-      playerName: string;
-      totalScore: number;
-    };
+    finalStandings: any[];
+    winner: any;
   }>('game:complete', (data) => {
     if (state.gameMode !== 'multiplayer') return;
+
+    console.log('[Game] Game complete', data);
 
     dispatch({
       type: 'MULTIPLAYER_GAME_COMPLETE',
@@ -333,39 +348,24 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
         winner: data.winner,
       },
     });
+
+    // Clear local state
+    setCurrentGuess(null);
+    setShowAnimatedPrompt(false);
   });
 
   /**
    * Listen to player:disconnected event
-   * Show toast during active game, modal during final results
    */
   useSocketEvent<{ playerId: string; playerName: string }>('player:disconnected', (data) => {
     if (state.gameMode !== 'multiplayer') return;
 
-    if (
-      state.gameStatus === GameStatus.GUESSING ||
-      state.gameStatus === GameStatus.ROUND_COMPLETE
-    ) {
-      // Show toast during active game
-      toast.error(`${data.playerName} disconnected`, { icon: '⚠️' });
-    } else if (state.gameStatus === GameStatus.GAME_COMPLETE) {
-      // Show blocking modal during final results
-      setShowDisconnectedModal(true);
-      setDisconnectedPlayerName(data.playerName);
-    }
-  });
+    console.log('[Game] Player disconnected', data);
 
-  /**
-   * Listen to game:playerLeftResults event
-   * Player left during final results/rematch screen
-   */
-  useSocketEvent<{ playerId: string; playerName: string }>('game:playerLeftResults', (data) => {
-    if (state.gameMode !== 'multiplayer') return;
+    setDisconnectedPlayerName(data.playerName);
+    setShowDisconnectedModal(true);
 
-    if (state.gameStatus === GameStatus.GAME_COMPLETE) {
-      setShowDisconnectedModal(true);
-      setDisconnectedPlayerName(data.playerName);
-    }
+    toast.warning(`${data.playerName} has disconnected`);
   });
 
   /**
@@ -469,33 +469,24 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   });
 
   /**
-   * Auto-submit guess when timer expires in multiplayer
+   * Handle multiplayer timer expiration
    */
-  const handleTimerExpired = () => {
-    if (state.gameMode !== 'multiplayer' || !socket) return;
-
-    // Auto-submit guess at (0, 0) coordinates
-    socket.emit(SOCKET_EVENTS.GAME_GUESS_SUBMITTED, {
-      roomCode: state.currentRoom?.code,
-      roundNumber: state.multiplayerGameState?.currentRound,
-      guess: { lat: 0, lng: 0 },
-      timestamp: Date.now(),
-      autoSubmit: true,
-    });
-
-    // Update local state
-    dispatch({
-      type: 'MULTIPLAYER_GUESS_SUBMITTED',
-      payload: { guess: { lat: 0, lng: 0 } },
-    });
-
-    toast.info("Time's up! Auto-submitting...", { icon: '⏱️' });
+  const handleMultiplayerTimeUp = () => {
+    console.log('[Game] Multiplayer timer expired');
+    // Timer expiration is handled by the server
+    // Server will emit game:round_complete when time is up
   };
 
-  // Get current city for display
-  const currentCity = state.selectedCities[state.currentRound - 1];
+  /**
+   * Current city for the active round
+   */
+  const currentCity = state.selectedCities[
+    state.gameMode === 'multiplayer'
+      ? (state.multiplayerGameState?.currentRound || 1) - 1
+      : state.currentRound - 1
+  ];
 
-  // Check if level was passed on LEVEL_COMPLETE
+  // Determine if we should show LEVEL_FAILED state
   const levelPassed =
     state.gameStatus === GameStatus.LEVEL_COMPLETE &&
     state.totalScore >= getLevelThreshold(state.currentLevel);
@@ -575,13 +566,15 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                 state.gameMode === 'multiplayer' &&
                 state.gameStatus === GameStatus.ROUND_COMPLETE &&
                 state.multiplayerGameState?.roundResults
-                  ? state.multiplayerGameState.roundResults.map((result, index) => ({
-                      playerId: result.playerId,
-                      playerName: result.playerName,
-                      guess: result.guess,
-                      color: ['#3b82f6', '#10b981', '#a855f7', '#f97316', '#eab308'][index % 5],
-                      distance: result.distance,
-                    }))
+                  ? state.multiplayerGameState.roundResults
+                      .filter(result => result.guess !== null) // Filter out null guesses
+                      .map((result, index) => ({
+                        playerId: result.playerId,
+                        playerName: result.playerName,
+                        guess: result.guess as { lat: number; lng: number },
+                        color: ['#3b82f6', '#10b981', '#a855f7', '#f97316', '#eab308'][index % 5],
+                        distance: result.distance || undefined,
+                      }))
                   : undefined
               }
               cityName={
@@ -597,53 +590,39 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                 <GameInfoCard
                   level={state.currentLevel}
                   round={state.currentRound}
-                  currentScore={state.roundScores[state.roundScores.length - 1] || 0}
-                  totalScore={state.totalScore}
-                  requiredScore={getLevelThreshold(state.currentLevel)}
+                  score={state.totalScore}
                 />
               </div>
             )}
 
-            {/* Confirm Button (appears when pin is placed during GUESSING) */}
-            {state.gameStatus === GameStatus.GUESSING && currentGuess && !state.multiplayerGameState?.hasGuessed && (
-              <div className="relative z-10">
-                <ConfirmButton onConfirm={handleConfirmGuess} disabled={false} />
-              </div>
-            )}
-
-            {/* Multiplayer Timer (shown during GUESSING state, continues after player submits) */}
+            {/* Multiplayer Timer - Only show during GUESSING state */}
             {state.gameMode === 'multiplayer' &&
               state.gameStatus === GameStatus.GUESSING &&
-              state.multiplayerGameState?.roundStartTime &&
-              state.multiplayerGameState?.timerDuration && (
+              state.multiplayerGameState?.roundStartTime && (
                 <MultiplayerTimer
                   serverStartTime={state.multiplayerGameState.roundStartTime}
                   timerDuration={state.multiplayerGameState.timerDuration}
-                  onTimeUp={handleTimerExpired}
+                  onTimeUp={handleMultiplayerTimeUp}
                 />
               )}
 
-            {/* Waiting Indicator (after player submits but others haven't) */}
+            {/* Multiplayer Waiting Indicator - Show after player submits guess */}
             {state.gameMode === 'multiplayer' &&
               state.gameStatus === GameStatus.GUESSING &&
               state.multiplayerGameState?.hasGuessed && (
-                <WaitingIndicator />
+                <WaitingIndicator
+                  message="Waiting for other players..."
+                  totalPlayers={state.currentRoom?.players.length || 0}
+                  playersGuessed={
+                    1 +
+                    Array.from(state.multiplayerGameState.otherPlayersGuessed.values()).filter((g) => g)
+                      .length
+                  }
+                />
               )}
 
-            {/* Level Announcement (shows first during GUESSING) */}
-            {state.gameStatus === GameStatus.GUESSING && showLevelAnnouncement && (
-              <LevelAnnouncement
-                level={state.currentLevel}
-                round={state.currentRound}
-                onComplete={() => {
-                  setShowLevelAnnouncement(false);
-                  setShowAnimatedPrompt(true);
-                }}
-              />
-            )}
-
-            {/* City Prompt - Shows with animation when round starts, then stays at top-right on desktop, below GameInfoCard on mobile (GUESSING only) */}
-            {state.gameStatus === GameStatus.GUESSING && currentCity && !showLevelAnnouncement && (
+            {/* City Prompt - Show city name and country */}
+            {currentCity && state.gameStatus === GameStatus.GUESSING && (
               showAnimatedPrompt ? (
                 <CityPrompt
                   cityName={currentCity.name}
@@ -695,6 +674,14 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                   </div>
                 </div>
               )}
+
+            {/* Confirm Button - Only show during GUESSING state when pin is placed */}
+            {state.gameStatus === GameStatus.GUESSING && currentGuess && (
+              <ConfirmButton
+                onConfirm={handleConfirmGuess}
+                disabled={!currentGuess}
+              />
+            )}
           </div>
         </>
       )}
@@ -729,54 +716,44 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
               hasRequestedRematch={state.multiplayerGameState?.rematchRequests?.has(
                 state.currentPlayer?.id || ''
               )}
-              rematchCountdown={rematchCountdown}
-              onPlayAgain={() => {
-                socket?.emit('game:rematchRequest', {
+              onRematch={() => {
+                socket?.emit('rematch:request', {
                   roomCode: state.currentRoom?.code,
-                });
-                dispatch({
-                  type: 'MULTIPLAYER_REMATCH_REQUESTED',
-                  payload: { playerId: state.currentPlayer?.id || '' },
                 });
               }}
               onLeaveRoom={() => {
-                socket?.emit(SOCKET_EVENTS.LEAVE_ROOM, { roomCode: state.currentRoom?.code });
-                if (onBackToMainMenu) {
-                  onBackToMainMenu();
+                if (onBackToLobby) {
+                  onBackToLobby();
                 }
               }}
+              rematchCountdown={rematchCountdown}
             />
           </div>
         )}
 
-      {/* Disconnected Player Modal (blocking) */}
-      {showDisconnectedModal && (
-        <DisconnectedPlayerModal
-          playerName={disconnectedPlayerName}
-          onMainMenu={() => {
-            setShowDisconnectedModal(false);
-            if (onBackToMainMenu) {
-              onBackToMainMenu();
-            }
+      {/* Level Announcement Overlay (single-player only) */}
+      {state.gameMode === 'single-player' && showLevelAnnouncement && (
+        <LevelAnnouncement
+          level={state.currentLevel}
+          onComplete={() => {
+            setShowLevelAnnouncement(false);
+            setShowAnimatedPrompt(true);
           }}
         />
       )}
+
+      {/* Disconnected Player Modal */}
+      <DisconnectedPlayerModal
+        isOpen={showDisconnectedModal}
+        playerName={disconnectedPlayerName}
+        onClose={() => setShowDisconnectedModal(false)}
+        onLeaveRoom={onBackToLobby}
+      />
       </div>
     </div>
   );
 }
 
-/**
- * Main Game component that wraps the game content with the GameProvider.
- * This component orchestrates the complete game flow including:
- * - Single-player: Game initialization and city selection, round-by-round gameplay with map interaction,
- *   score calculation and result display, level progression and failure handling
- * - Multiplayer: Synchronized real-time gameplay, timer-based rounds, multi-player results,
- *   final standings with rematch functionality
- *
- * The game integrates all UI components and manages state transitions
- * through the GameContext using the useReducer pattern.
- */
-export default function Game({ onBackToMainMenu, onBackToLobby }: GameProps = {}) {
-  return <GameContent onBackToMainMenu={onBackToMainMenu} onBackToLobby={onBackToLobby} />;
+export default function Game(props: GameProps) {
+  return <GameContent {...props} />;
 }

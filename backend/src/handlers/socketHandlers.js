@@ -434,6 +434,72 @@ export function registerSocketHandlers(socket, io) {
   });
 
   /**
+   * Handle round:player_ready event (continue button)
+   */
+  socket.on(SOCKET_EVENTS.ROUND_PLAYER_READY, (request, callback) => {
+    try {
+      if (!request?.roomCode || !request?.playerId) {
+        throw { code: 'VALIDATION_ERROR', message: 'Room code and player ID are required' };
+      }
+
+      const gameSession = gameSessionManager.getSession(request.roomCode);
+
+      if (!gameSession) {
+        throw { code: 'GAME_NOT_FOUND', message: 'Game session not found' };
+      }
+
+      // Validate that player is in the game session
+      if (!gameSession.playerData.has(request.playerId)) {
+        throw { code: 'PLAYER_NOT_FOUND', message: 'Player not found in this game session' };
+      }
+
+      // Mark player as ready
+      gameSession.markPlayerReady(request.playerId);
+
+      const readyStatus = gameSession.getReadyStatus();
+
+      console.log(
+        `[Socket] Player ${request.playerId} ready for next round in room ${request.roomCode} (${readyStatus.readyCount}/${readyStatus.totalPlayers})`
+      );
+
+      // Send response to requesting player
+      if (callback) {
+        callback({
+          success: true,
+          data: readyStatus,
+        });
+      }
+
+      // Check if all players are ready
+      if (gameSession.areAllPlayersReady()) {
+        console.log(`[Socket] All players ready in room ${request.roomCode}, advancing to next round`);
+
+        // Clear any existing countdown timer
+        gameSession.clearRoundTimer();
+
+        // Emit round:all_ready to all players
+        io.to(request.roomCode).emit(SOCKET_EVENTS.ROUND_ALL_READY, {
+          roomCode: request.roomCode,
+          nextRound: gameSession.currentRound + 1,
+        });
+
+        // Advance to next round or complete game
+        advanceToNextRound(io, request.roomCode, gameSession);
+      }
+    } catch (error) {
+      console.error(`[Socket] Error handling round:player_ready:`, error);
+      const errorResponse = {
+        code: error.code || 'INTERNAL_ERROR',
+        message: error.message || 'Failed to mark player ready',
+      };
+
+      if (callback) {
+        callback({ success: false, error: errorResponse });
+      }
+    }
+  });
+
+  /**
    * Handle rematch request
    */
   socket.on('game:rematchRequest', (request, callback) => {
@@ -726,6 +792,7 @@ function emitRoundComplete(io, roomCode, gameSession) {
 
 /**
  * Helper: Start countdown for auto-advance
+ * This handles the timer expiration case for round:all_ready
  */
 function startAutoAdvanceCountdown(io, roomCode, gameSession) {
   // Use 5 seconds for final round, 10 seconds for other rounds
@@ -742,46 +809,64 @@ function startAutoAdvanceCountdown(io, roomCode, gameSession) {
     if (countdown < 0) {
       clearInterval(countdownInterval);
 
-      // Check if game is complete
-      if (gameSession.currentRound >= gameSession.totalRounds) {
-        // Game complete
-        const { finalStandings, winner } = gameSession.getFinalStandings();
-
-        io.to(roomCode).emit(SOCKET_EVENTS.GAME_COMPLETE, {
+      // Check if all players are ready (clicked continue) before timer expired
+      if (!gameSession.areAllPlayersReady()) {
+        // Timer expired, emit round:all_ready with partial readiness
+        console.log(`[Socket] Round timer expired in room ${roomCode}, advancing with partial readiness`);
+        io.to(roomCode).emit(SOCKET_EVENTS.ROUND_ALL_READY, {
           roomCode,
-          finalStandings,
-          winner,
+          nextRound: gameSession.currentRound + 1,
         });
-
-        // Update room status
-        const room = roomManager.getRoom(roomCode);
-        if (room) {
-          room.status = 'finished';
-        }
-      } else {
-        // Advance to next round
-        gameSession.advanceRound();
-        const startTime = gameSession.startRound();
-        const currentCity = gameSession.getCurrentCity();
-
-        io.to(roomCode).emit('round:started', {
-          roomCode,
-          roundNumber: gameSession.currentRound,
-          cityTarget: {
-            name: currentCity.name,
-            country: currentCity.country,
-          },
-          startTime,
-          timerDuration: gameSession.timerDuration,
-        });
-
-        // Start round timer - all rounds use the configured timer duration
-        gameSession.startRoundTimer(() => {
-          handleRoundTimerExpiration(io, roomCode, gameSession);
-        }, gameSession.timerDuration);
       }
+
+      // Advance to next round or complete game
+      advanceToNextRound(io, roomCode, gameSession);
     }
   }, 1000);
+}
+
+/**
+ * Helper: Advance to next round or complete game
+ */
+function advanceToNextRound(io, roomCode, gameSession) {
+  // Check if game is complete
+  if (gameSession.currentRound >= gameSession.totalRounds) {
+    // Game complete
+    const { finalStandings, winner } = gameSession.getFinalStandings();
+
+    io.to(roomCode).emit(SOCKET_EVENTS.GAME_COMPLETE, {
+      roomCode,
+      finalStandings,
+      winner,
+    });
+
+    // Update room status
+    const room = roomManager.getRoom(roomCode);
+    if (room) {
+      room.status = 'finished';
+    }
+  } else {
+    // Advance to next round
+    gameSession.advanceRound();
+    const startTime = gameSession.startRound();
+    const currentCity = gameSession.getCurrentCity();
+
+    io.to(roomCode).emit('round:started', {
+      roomCode,
+      roundNumber: gameSession.currentRound,
+      cityTarget: {
+        name: currentCity.name,
+        country: currentCity.country,
+      },
+      startTime,
+      timerDuration: gameSession.timerDuration,
+    });
+
+    // Start round timer - all rounds use the configured timer duration
+    gameSession.startRoundTimer(() => {
+      handleRoundTimerExpiration(io, roomCode, gameSession);
+    }, gameSession.timerDuration);
+  }
 }
 
 /**
