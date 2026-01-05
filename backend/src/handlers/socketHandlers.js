@@ -328,16 +328,10 @@ export function registerSocketHandlers(socket, io) {
 
       // Emit round:started after a short delay to ensure clients are ready
       setTimeout(() => {
-        const currentCity = gameSession.getCurrentCity();
         const currentRound = 1;
 
         io.to(request.roomCode).emit('round:started', {
-          roomCode: request.roomCode,
           roundNumber: currentRound,
-          cityTarget: {
-            name: currentCity.name,
-            country: currentCity.country,
-          },
           startTime,
           timerDuration: timerDuration,
         });
