@@ -37,6 +37,7 @@ export class GameSession {
     this.roundGuesses = new Map(); // Map<socketId, {guess, distance, score, timeBonus, timestamp, submittedAt}>
     this.roundStartTime = null;
     this.roundTimer = null; // setTimeout handle
+    this.countdownInterval = null; // setInterval handle for auto-advance countdown
 
     // Game-wide state
     this.playerScores = new Map(); // Map<socketId, {playerName, totalScore, roundScores: [], roundDistances: []}>
@@ -387,10 +388,21 @@ export class GameSession {
   }
 
   /**
+   * Clear the countdown interval
+   */
+  clearCountdownInterval() {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
+  }
+
+  /**
    * Clean up session resources
    */
   destroy() {
     this.clearRoundTimer();
+    this.clearCountdownInterval();
     this.roundGuesses.clear();
     this.playerScores.clear();
     this.playerData.clear();

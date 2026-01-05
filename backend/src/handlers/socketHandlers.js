@@ -474,7 +474,8 @@ export function registerSocketHandlers(socket, io) {
       if (gameSession.areAllPlayersReady()) {
         console.log(`[Socket] All players ready in room ${request.roomCode}, advancing to next round`);
 
-        // Clear any existing countdown timer
+        // Clear any existing countdown interval and timer
+        gameSession.clearCountdownInterval();
         gameSession.clearRoundTimer();
 
         // Emit round:all_ready to all players
@@ -795,10 +796,14 @@ function emitRoundComplete(io, roomCode, gameSession) {
  * This handles the timer expiration case for round:all_ready
  */
 function startAutoAdvanceCountdown(io, roomCode, gameSession) {
+  // Clear any existing countdown interval
+  gameSession.clearCountdownInterval();
+
   // Use 5 seconds for final round, 10 seconds for other rounds
   let countdown = gameSession.currentRound >= gameSession.totalRounds ? 5 : 10;
 
-  const countdownInterval = setInterval(() => {
+  // Store the interval in the game session so it can be cleared
+  gameSession.countdownInterval = setInterval(() => {
     io.to(roomCode).emit('countdown:tick', {
       roundNumber: gameSession.currentRound,
       remainingSeconds: countdown,
@@ -807,7 +812,7 @@ function startAutoAdvanceCountdown(io, roomCode, gameSession) {
     countdown--;
 
     if (countdown < 0) {
-      clearInterval(countdownInterval);
+      gameSession.clearCountdownInterval();
 
       // Check if all players are ready (clicked continue) before timer expired
       if (!gameSession.areAllPlayersReady()) {

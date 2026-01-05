@@ -340,10 +340,12 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   });
 
   /**
-   * Listen to game:countdown_tick event for auto-advance countdown
+   * Listen to countdown:tick event for auto-advance countdown (backend emits this)
    */
-  useSocketEvent<{ remainingSeconds: number }>('game:countdown_tick', (data) => {
+  useSocketEvent<{ remainingSeconds: number }>('countdown:tick', (data) => {
     if (state.gameMode !== 'multiplayer') return;
+
+    console.log('[Game] Countdown tick received:', data.remainingSeconds);
 
     dispatch({
       type: 'MULTIPLAYER_COUNTDOWN_TICK',

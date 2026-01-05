@@ -19,6 +19,8 @@ interface MultiplayerRoundResultsProps {
   roundScore: number;
   /** Current player's total score across all rounds */
   totalScore: number;
+  /** Room code for multiplayer session */
+  roomCode: string;
 }
 
 /**
@@ -43,6 +45,7 @@ export default function MultiplayerRoundResults({
   countdown,
   roundScore,
   totalScore,
+  roomCode,
 }: MultiplayerRoundResultsProps) {
   const { state: socketState } = useSocket();
   const socket = socketState.socket;
@@ -70,8 +73,14 @@ export default function MultiplayerRoundResults({
   const handleContinue = () => {
     if (!socket || hasClickedContinue) return;
 
+    console.log('[MultiplayerRoundResults] Continue clicked, emitting round:player_ready', {
+      roomCode,
+      playerId: currentPlayerId,
+    });
+
     // Emit round:player_ready event to server
     socket.emit('round:player_ready', {
+      roomCode,
       playerId: currentPlayerId,
     });
 
@@ -157,16 +166,9 @@ export default function MultiplayerRoundResults({
                       </span>
                     </td>
                     <td className="px-2 py-1 text-right">
-                      <div className="flex flex-col items-end">
-                        <span className="text-green-400 font-bold text-xs sm:text-sm">
-                          {formatNumber(roundTotal)}
-                        </span>
-                        {timeBonus > 0 && (
-                          <span className="text-[9px] sm:text-[10px] text-amber-400">
-                            +{formatNumber(timeBonus)} time
-                          </span>
-                        )}
-                      </div>
+                      <span className="text-green-400 font-bold text-xs sm:text-sm">
+                        {formatNumber(roundTotal)}
+                      </span>
                     </td>
                     <td className="px-2 py-1 text-right">
                       <span className="text-white font-bold text-xs sm:text-sm">
@@ -192,38 +194,32 @@ export default function MultiplayerRoundResults({
           </div>
         </div>
 
-        {/* Countdown or Calculating Message */}
-        {countdown !== null && (
+        {/* Calculating Message (final round only) */}
+        {countdown !== null && isFinalRound && (
           <div className="text-center">
-            {isFinalRound ? (
-              <p className="text-xs sm:text-sm text-primary animate-pulse">
-                Calculating results...
-              </p>
-            ) : (
-              <p className="text-xs sm:text-sm text-gray-400">
-                Next round in <span className="font-bold text-primary">{countdown}</span>...
-              </p>
-            )}
+            <p className="text-xs sm:text-sm text-primary animate-pulse">
+              Calculating results...
+            </p>
           </div>
         )}
       </div>
 
       {/* Continue Button */}
-      {countdown !== null && !hasClickedContinue && (
+      {countdown !== null && !isFinalRound && (
         <button
           onClick={handleContinue}
-          className="bg-gradient-to-r from-teal-600 to-blue-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 min-h-[44px] text-base sm:text-lg animate-slide-up pointer-events-auto"
+          disabled={hasClickedContinue}
+          className={`${
+            hasClickedContinue
+              ? 'bg-gray-600 cursor-wait'
+              : 'bg-gradient-to-r from-teal-600 to-blue-600 hover:shadow-xl transform hover:scale-105'
+          } text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-200 min-h-[44px] text-base sm:text-lg animate-slide-up pointer-events-auto`}
           aria-label="Continue to next round"
         >
-          Continue {countdown !== null && `(${countdown}s)`}
+          {hasClickedContinue
+            ? `Waiting for other players... (${countdown})`
+            : `Continue (${countdown})`}
         </button>
-      )}
-
-      {/* Waiting message after clicking continue */}
-      {hasClickedContinue && countdown !== null && (
-        <div className="text-center text-xs sm:text-sm text-gray-400 pointer-events-auto">
-          <p>Waiting for other players...</p>
-        </div>
       )}
     </div>
   );

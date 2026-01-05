@@ -1,19 +1,27 @@
 interface DisconnectedPlayerModalProps {
+  /** Whether modal is open */
+  isOpen: boolean;
   /** Name of the player who disconnected */
   playerName: string;
-  /** Callback when Main Menu button is clicked */
-  onMainMenu: () => void;
+  /** Callback when close button is clicked */
+  onClose: () => void;
+  /** Callback when Leave Room button is clicked */
+  onLeaveRoom?: () => void;
 }
 
 /**
  * DisconnectedPlayerModal component shows a blocking modal when a player
- * disconnects during the final results screen.
- * Prevents any other interaction and forces navigation to main menu.
+ * disconnects during the game.
+ * Allows closing the modal or leaving the room.
  */
 export default function DisconnectedPlayerModal({
+  isOpen,
   playerName,
-  onMainMenu,
+  onClose,
+  onLeaveRoom,
 }: DisconnectedPlayerModalProps) {
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
       <div className="bg-dark-elevated rounded-2xl shadow-2xl max-w-md w-full p-8 animate-slide-up border border-red-500/50">
@@ -31,13 +39,23 @@ export default function DisconnectedPlayerModal({
           </p>
         </div>
 
-        {/* Main Menu Button */}
-        <button
-          onClick={onMainMenu}
-          className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 min-h-[44px] text-lg"
-        >
-          Main Menu
-        </button>
+        {/* Buttons */}
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={onClose}
+            className="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 min-h-[44px] text-lg"
+          >
+            Continue Playing
+          </button>
+          {onLeaveRoom && (
+            <button
+              onClick={onLeaveRoom}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 min-h-[44px] text-lg"
+            >
+              Leave Room
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
