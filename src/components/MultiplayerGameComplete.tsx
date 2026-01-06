@@ -14,7 +14,7 @@ interface MultiplayerGameCompleteProps {
   /** All players in the room */
   allPlayers: { id: string; name: string }[];
   /** Callback when Play Again is clicked */
-  onPlayAgain: () => void;
+  onRematch: () => void;
   /** Callback when Leave Room is clicked */
   onLeaveRoom: () => void;
   /** Whether current player has already requested rematch */
@@ -42,7 +42,7 @@ export default function MultiplayerGameComplete({
   currentPlayerId,
   rematchRequests,
   allPlayers,
-  onPlayAgain,
+  onRematch,
   onLeaveRoom,
   hasRequestedRematch,
   rematchCountdown,
@@ -193,7 +193,13 @@ export default function MultiplayerGameComplete({
                   {/* Ready button/status */}
                   {isCurrentPlayer ? (
                     <button
-                      onClick={onPlayAgain}
+                      onClick={() => {
+                        console.log('[MultiplayerGameComplete] Ready button clicked', {
+                          hasRequestedRematch,
+                          currentPlayerId,
+                        });
+                        onRematch();
+                      }}
                       disabled={hasRequestedRematch}
                       className={`px-3 sm:px-4 py-1.5 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200 min-h-[44px] flex-shrink-0 ${
                         hasRequestedRematch

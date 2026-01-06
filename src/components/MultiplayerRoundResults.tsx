@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { PlayerRoundResult } from '../types/game';
 import { useSocket } from '../hooks/useSocket';
+import { SOCKET_EVENTS } from '../types/socket-events';
 
 interface MultiplayerRoundResultsProps {
   /** Current round number */
@@ -77,7 +78,7 @@ export default function MultiplayerRoundResults({
     });
 
     // Emit round:player_ready event to server
-    socket.emit('round:player_ready', {
+    socket.emit(SOCKET_EVENTS.ROUND_PLAYER_READY, {
       roomCode,
       playerId: currentPlayerId,
     });

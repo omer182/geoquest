@@ -336,6 +336,9 @@ export default function InteractiveMap({
   // State for GeoJSON country data
   const [countriesData, setCountriesData] = useState<GeoJSONFeatureCollection | null>(null);
 
+  // State for USA states GeoJSON data
+  const [usStatesData, setUsStatesData] = useState<GeoJSONFeatureCollection | null>(null);
+
   // State for line fade-in animation
   const [lineOpacity, setLineOpacity] = useState(0);
   const hasFadedInRef = useRef(false);
@@ -398,11 +401,11 @@ export default function InteractiveMap({
 
   // Load GeoJSON data on mount and apply Four Color Theorem
   useEffect(() => {
-    // Fetch GeoJSON data from the URL
+    // Fetch countries GeoJSON data from the URL
     fetch(countriesGeoJSON)
       .then(response => response.json())
       .then((data: GeoJSONFeatureCollection) => {
-        console.log('GeoJSON loaded, features count:', data.features.length);
+        console.log('Countries GeoJSON loaded, features count:', data.features.length);
 
         // Build adjacency map
         const adjacencyMap = buildAdjacencyMap(data.features);
@@ -420,7 +423,18 @@ export default function InteractiveMap({
         setCountriesData(data);
       })
       .catch(error => {
-        console.error('Failed to load GeoJSON:', error);
+        console.error('Failed to load countries GeoJSON:', error);
+      });
+
+    // Fetch USA states GeoJSON data
+    fetch('/src/assets/geo/us-states.geojson')
+      .then(response => response.json())
+      .then((data: GeoJSONFeatureCollection) => {
+        console.log('USA states GeoJSON loaded, features count:', data.features.length);
+        setUsStatesData(data);
+      })
+      .catch(error => {
+        console.error('Failed to load USA states GeoJSON:', error);
       });
 
     /**
@@ -716,6 +730,31 @@ export default function InteractiveMap({
     }
   };
 
+  /**
+   * Style function for USA state boundaries
+   * Shows only the outlines, no fill
+   */
+  const usStateStyle = () => {
+    return {
+      fillColor: 'transparent',
+      fillOpacity: 0,
+      color: '#555555', // Dark gray border for state lines
+      weight: 1.5,
+      opacity: 0.5,
+    };
+  };
+
+  /**
+   * Disable interactive features on USA state polygons
+   */
+  const onEachUsState = (_feature: GeoJSON.Feature, layer: L.Layer) => {
+    // Disable all interactive features (no click, hover, tooltip)
+    if ('options' in layer && layer.options) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (layer.options as any).interactive = false;
+    }
+  };
+
   // Max bounds to constrain map to show only one world instance (no horizontal wrapping)
   const maxBounds: L.LatLngBoundsExpression = [
     [-90, -180], // Southwest coordinates
@@ -752,6 +791,17 @@ export default function InteractiveMap({
           data={countriesData}
           style={countryStyle}
           onEachFeature={onEachCountry}
+          pane="tilePane"
+        />
+      )}
+
+      {/* USA state boundaries - outline only, rendered on top of countries but below markers */}
+      {usStatesData && (
+        <GeoJSON
+          key="us-states"
+          data={usStatesData}
+          style={usStateStyle}
+          onEachFeature={onEachUsState}
           pane="tilePane"
         />
       )}

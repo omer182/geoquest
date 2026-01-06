@@ -388,7 +388,7 @@ export function registerSocketHandlers(socket, io) {
 
       // Broadcast that player has guessed (without revealing guess location)
       const playerData = gameSession.playerData.get(socket.id);
-      io.to(request.roomCode).emit('player:guessed', {
+      io.to(request.roomCode).emit('game:player_guessed', {
         playerId: socket.id,
         playerName: playerData?.name || 'Unknown',
         hasGuessed: true,
@@ -849,7 +849,6 @@ function advanceToNextRound(io, roomCode, gameSession) {
     const { finalStandings, winner } = gameSession.getFinalStandings();
 
     io.to(roomCode).emit(SOCKET_EVENTS.GAME_COMPLETE, {
-      roomCode,
       finalStandings,
       winner,
     });
@@ -867,6 +866,11 @@ function advanceToNextRound(io, roomCode, gameSession) {
     const currentCity = gameSession.getCurrentCity();
 
     console.log(`[advanceToNextRound] Emitting round:started for round ${gameSession.currentRound}, city: ${currentCity.name}`);
+    console.log(`[advanceToNextRound] Payload:`, {
+      roundNumber: gameSession.currentRound,
+      startTime,
+      timerDuration: gameSession.timerDuration,
+    });
 
     io.to(roomCode).emit('round:started', {
       roundNumber: gameSession.currentRound,

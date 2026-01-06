@@ -377,6 +377,10 @@ export const SOCKET_EVENTS = {
   GAME_GUESS_SUBMITTED: 'game:guessSubmitted',
   GAME_ROUND_COMPLETE: 'game:roundComplete',
   GAME_COMPLETE: 'game:complete',
+
+  // Continue button events
+  ROUND_PLAYER_READY: 'round:player_ready',
+  ROUND_ALL_READY: 'round:all_ready',
 } as const;
 
 /**

@@ -39,9 +39,9 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
 
   const [currentGuess, setCurrentGuess] = useState<{ lat: number; lng: number } | null>(null);
   const [mapKey, setMapKey] = useState(0); // Key to force map remount
-  // For multiplayer, skip level announcement. For single-player, show it.
-  const [showLevelAnnouncement, setShowLevelAnnouncement] = useState(state.gameMode === 'single-player');
-  const [showAnimatedPrompt, setShowAnimatedPrompt] = useState(state.gameMode === 'multiplayer');
+  // Level announcement and city prompt - both start hidden, shown after game starts
+  const [showLevelAnnouncement, setShowLevelAnnouncement] = useState(false);
+  const [showAnimatedPrompt, setShowAnimatedPrompt] = useState(false);
 
   // Disconnection modal state
   const [showDisconnectedModal, setShowDisconnectedModal] = useState(false);
@@ -256,6 +256,10 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
     if (state.gameMode !== 'multiplayer') return;
 
     console.log('[Game] Round started', data);
+
+    // Reset map for new round (clears pins from previous round)
+    setMapKey((prev) => prev + 1);
+    setCurrentGuess(null);
 
     dispatch({
       type: 'MULTIPLAYER_ROUND_START',
@@ -724,7 +728,12 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                 state.currentPlayer?.id || ''
               )}
               onRematch={() => {
-                socket?.emit('rematch:request', {
+                console.log('[Game] onRematch called', {
+                  socket: !!socket,
+                  socketId: socket?.id,
+                  roomCode: state.currentRoom?.code,
+                });
+                socket?.emit('game:rematchRequest', {
                   roomCode: state.currentRoom?.code,
                 });
               }}
@@ -755,6 +764,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
         playerName={disconnectedPlayerName}
         onClose={() => setShowDisconnectedModal(false)}
         onLeaveRoom={onBackToLobby}
+        remainingPlayersCount={state.currentRoom?.players.length || 1}
       />
       </div>
     </div>

@@ -7,6 +7,8 @@ interface DisconnectedPlayerModalProps {
   onClose: () => void;
   /** Callback when Leave Room button is clicked */
   onLeaveRoom?: () => void;
+  /** Number of players remaining in the room (excluding disconnected player) */
+  remainingPlayersCount?: number;
 }
 
 /**
@@ -19,8 +21,12 @@ export default function DisconnectedPlayerModal({
   playerName,
   onClose,
   onLeaveRoom,
+  remainingPlayersCount = 1,
 }: DisconnectedPlayerModalProps) {
   if (!isOpen) return null;
+
+  // Player is alone if there's only 1 player remaining (themselves)
+  const isAlone = remainingPlayersCount === 1;
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
@@ -33,26 +39,38 @@ export default function DisconnectedPlayerModal({
 
         {/* Message */}
         <div className="bg-dark-card rounded-lg p-4 mb-6">
-          <p className="text-lg text-gray-300 text-center">
-            <span className="font-semibold text-red-400">{playerName}</span> has disconnected from
-            the game.
-          </p>
+          {isAlone ? (
+            <p className="text-lg text-gray-300 text-center">
+              <span className="font-semibold text-red-400">{playerName}</span> has disconnected.
+              <br />
+              <span className="text-sm text-gray-400 mt-2 block">
+                You are the only player remaining in the room.
+              </span>
+            </p>
+          ) : (
+            <p className="text-lg text-gray-300 text-center">
+              <span className="font-semibold text-red-400">{playerName}</span> has disconnected from
+              the game.
+            </p>
+          )}
         </div>
 
         {/* Buttons */}
         <div className="flex flex-col gap-3">
-          <button
-            onClick={onClose}
-            className="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 min-h-[44px] text-lg"
-          >
-            Continue Playing
-          </button>
+          {!isAlone && (
+            <button
+              onClick={onClose}
+              className="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 min-h-[44px] text-lg"
+            >
+              Continue Playing
+            </button>
+          )}
           {onLeaveRoom && (
             <button
               onClick={onLeaveRoom}
               className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 min-h-[44px] text-lg"
             >
-              Leave Room
+              {isAlone ? 'Back to Main Menu' : 'Leave Room'}
             </button>
           )}
         </div>
