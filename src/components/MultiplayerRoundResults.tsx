@@ -72,6 +72,11 @@ export default function MultiplayerRoundResults({
   const handleContinue = () => {
     if (!socket || hasClickedContinue) return;
 
+    console.log('[MultiplayerRoundResults] Continue clicked, emitting round:player_ready', {
+      roomCode,
+      playerId: currentPlayerId,
+    });
+
     // Emit round:player_ready event to server
     socket.emit(SOCKET_EVENTS.ROUND_PLAYER_READY, {
       roomCode,
@@ -82,15 +87,15 @@ export default function MultiplayerRoundResults({
     setHasClickedContinue(true);
   };
 
-  // Sort results by total score (cumulative, descending - highest first)
+  // Sort results by round score + time bonus (descending)
   const sortedResults = [...results].sort((a, b) => {
-    const totalA = a.totalScore || 0;
-    const totalB = b.totalScore || 0;
-    return totalB - totalA;
+    const scoreA = a.score + (a.timeBonus || 0);
+    const scoreB = b.score + (b.timeBonus || 0);
+    return scoreB - scoreA;
   });
 
-  // Crown always goes to the top player (first in sorted list - highest total score)
-  const winnerId = sortedResults.length > 0 ? sortedResults[0].playerId : null;
+  // Find winner (highest round score + time bonus)
+  const winnerId = sortedResults[0]?.playerId;
 
   // Check if this is the final round
   const isFinalRound = roundNumber === totalRounds;

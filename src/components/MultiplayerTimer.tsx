@@ -58,10 +58,10 @@ export default function MultiplayerTimer({
   const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
   return (
-    <div className="absolute top-4 left-4 sm:left-1/2 sm:-translate-x-1/2 z-50 animate-fade-in">
-      <div className="bg-dark-elevated/90 backdrop-blur-sm border border-primary/30 rounded-lg px-3 sm:px-4 py-2.5 shadow-lg">
+    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50">
+      <div className="bg-dark-elevated/90 backdrop-blur-sm border border-primary/30 rounded-lg px-4 py-2 shadow-lg">
         <div
-          className={`text-lg sm:text-xl md:text-2xl font-bold font-mono ${colorClass} transition-colors duration-300`}
+          className={`text-xl sm:text-2xl font-bold font-mono ${colorClass} transition-colors duration-300`}
         >
           {formattedTime}
         </div>

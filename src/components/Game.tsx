@@ -42,12 +42,6 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   // Level announcement and city prompt - both start hidden, shown after game starts
   const [showLevelAnnouncement, setShowLevelAnnouncement] = useState(false);
   const [showAnimatedPrompt, setShowAnimatedPrompt] = useState(false);
-  // Store pending round start data until city animation completes
-  const [pendingRoundStart, setPendingRoundStart] = useState<{
-    roundNumber: number;
-    startTime: number;
-    timerDuration: number;
-  } | null>(null);
 
   // Disconnection modal state
   const [showDisconnectedModal, setShowDisconnectedModal] = useState(false);
@@ -228,6 +222,8 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   }>('game:started', (data) => {
     if (state.gameMode !== 'multiplayer') return;
 
+    console.log('[Game] Game started event received', data);
+
     // Clear rematch countdown state if present
     setRematchCountdown(null);
     setCurrentGuess(null);
@@ -259,23 +255,17 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   }>('round:started', (data) => {
     if (state.gameMode !== 'multiplayer') return;
 
+    console.log('[Game] Round started', data);
+
     // Reset map for new round (clears pins from previous round)
     setMapKey((prev) => prev + 1);
     setCurrentGuess(null);
 
-    // Store round start data but don't set roundStartTime yet - wait for animation
-    setPendingRoundStart({
-      roundNumber: data.roundNumber,
-      startTime: data.startTime,
-      timerDuration: data.timerDuration,
-    });
-
-    // Update round number and other state, but without roundStartTime
     dispatch({
       type: 'MULTIPLAYER_ROUND_START',
       payload: {
         roundNumber: data.roundNumber,
-        startTime: null, // Don't start timer yet
+        startTime: data.startTime,
         timerDuration: data.timerDuration,
       },
     });
@@ -293,6 +283,8 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   }>('round:all_ready', (data) => {
     if (state.gameMode !== 'multiplayer') return;
 
+    console.log('[Game] All players ready, advancing round', data);
+
     // The backend will emit round:started next, which will handle the state update
     // This event just lets us know everyone is ready
   });
@@ -306,6 +298,8 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
     hasGuessed: boolean;
   }>('game:player_guessed', (data) => {
     if (state.gameMode !== 'multiplayer') return;
+
+    console.log('[Game] Player guessed', data);
 
     dispatch({
       type: 'MULTIPLAYER_PLAYER_GUESSED',
@@ -333,6 +327,8 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   }>('game:roundComplete', (data) => {
     if (state.gameMode !== 'multiplayer') return;
 
+    console.log('[Game] Round complete', data);
+
     dispatch({
       type: 'MULTIPLAYER_ROUND_COMPLETE',
       payload: {
@@ -353,6 +349,8 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   useSocketEvent<{ remainingSeconds: number }>('countdown:tick', (data) => {
     if (state.gameMode !== 'multiplayer') return;
 
+    console.log('[Game] Countdown tick received:', data.remainingSeconds);
+
     dispatch({
       type: 'MULTIPLAYER_COUNTDOWN_TICK',
       payload: {
@@ -369,6 +367,8 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
     winner: any;
   }>('game:complete', (data) => {
     if (state.gameMode !== 'multiplayer') return;
+
+    console.log('[Game] Game complete', data);
 
     dispatch({
       type: 'MULTIPLAYER_GAME_COMPLETE',
@@ -416,6 +416,8 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   useSocketEvent('game:rematch', () => {
     if (state.gameMode !== 'multiplayer') return;
 
+    console.log('[Game] Rematch event received (deprecated) - resetting state');
+
     // Clear all local state
     setRematchCountdown(null);
     setCurrentGuess(null);
@@ -447,6 +449,8 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
     (data) => {
       if (state.gameMode !== 'multiplayer') return;
 
+      console.log('[Game] Rematch status updated:', data.playersReady);
+
       dispatch({
         type: 'MULTIPLAYER_REMATCH_STATUS_UPDATED',
         payload: { rematchRequests: data.playersReady },
@@ -460,6 +464,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
    */
   useSocketEvent<{ countdown: number }>('rematch:countdownStarted', (data) => {
     if (state.gameMode !== 'multiplayer') return;
+    console.log('[Game] Rematch countdown started:', data.countdown);
     setRematchCountdown(data.countdown);
   });
 
@@ -469,6 +474,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
    */
   useSocketEvent<{ countdown: number }>('rematch:countdownTick', (data) => {
     if (state.gameMode !== 'multiplayer') return;
+    console.log('[Game] Rematch countdown tick:', data.countdown);
     setRematchCountdown(data.countdown);
   });
 
@@ -476,6 +482,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
    * Handle multiplayer timer expiration
    */
   const handleMultiplayerTimeUp = () => {
+    console.log('[Game] Multiplayer timer expired');
     // Timer expiration is handled by the server
     // Server will emit game:roundComplete when time is up
   };
@@ -612,6 +619,13 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                 />
               )}
 
+            {/* Multiplayer Waiting Indicator - Show after player submits guess */}
+            {state.gameMode === 'multiplayer' &&
+              state.gameStatus === GameStatus.GUESSING &&
+              state.multiplayerGameState?.hasGuessed && (
+                <WaitingIndicator />
+              )}
+
             {/* City Prompt - Show city name and country */}
             {currentCity && state.gameStatus === GameStatus.GUESSING && (
               showAnimatedPrompt ? (
@@ -619,24 +633,10 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                   cityName={currentCity.name}
                   country={currentCity.country}
                   showInitialAnimation
-                  onAnimationComplete={() => {
-                    setShowAnimatedPrompt(false);
-                    // Start timer after animation completes - use current time so timer starts from full duration
-                    if (pendingRoundStart) {
-                      dispatch({
-                        type: 'MULTIPLAYER_ROUND_START',
-                        payload: {
-                          roundNumber: pendingRoundStart.roundNumber,
-                          startTime: Date.now(), // Start timer now, not from server time
-                          timerDuration: pendingRoundStart.timerDuration,
-                        },
-                      });
-                      setPendingRoundStart(null);
-                    }
-                  }}
+                  onAnimationComplete={() => setShowAnimatedPrompt(false)}
                 />
               ) : (
-                <div className="absolute top-4 left-4 sm:left-auto sm:right-4 z-20">
+                <div className="absolute top-20 left-4 sm:top-4 sm:left-auto sm:right-4 z-20">
                   <CityPrompt cityName={currentCity.name} country={currentCity.country} />
                 </div>
               )
@@ -681,20 +681,12 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                 </div>
               )}
 
-            {/* Confirm Button - Show during GUESSING state when pin is placed, or show waiting state after submit */}
-            {state.gameStatus === GameStatus.GUESSING && (
-              state.gameMode === 'multiplayer' && state.multiplayerGameState?.hasGuessed ? (
-                <ConfirmButton
-                  onConfirm={() => {}}
-                  disabled={true}
-                  isWaiting={true}
-                />
-              ) : currentGuess ? (
-                <ConfirmButton
-                  onConfirm={handleConfirmGuess}
-                  disabled={!currentGuess}
-                />
-              ) : null
+            {/* Confirm Button - Only show during GUESSING state when pin is placed */}
+            {state.gameStatus === GameStatus.GUESSING && currentGuess && (
+              <ConfirmButton
+                onConfirm={handleConfirmGuess}
+                disabled={!currentGuess}
+              />
             )}
           </div>
         </>
@@ -731,6 +723,9 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                 state.currentPlayer?.id || ''
               )}
               onRematch={() => {
+                console.log('[Game] onRematch called', {
+                  socket: !!socket,
+                  socketId: socket?.id,
                   roomCode: state.currentRoom?.code,
                 });
                 socket?.emit('game:rematchRequest', {

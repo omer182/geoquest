@@ -84,12 +84,10 @@ export class GameSession {
 
   /**
    * Calculate time bonus based on submission speed
-   * Time bonus is 25% of the base score, scaled by how quickly the guess was submitted
    * @param {number} submittedAt - Timestamp when guess was submitted
-   * @param {number} baseScore - The base score (before time bonus) to calculate 25% from
-   * @returns {number} Time bonus points (0 to 25% of baseScore)
+   * @returns {number} Time bonus points (0-2000)
    */
-  calculateTimeBonus(submittedAt, baseScore) {
+  calculateTimeBonus(submittedAt) {
     if (!this.roundStartTime) {
       return 0;
     }
@@ -97,11 +95,10 @@ export class GameSession {
     const elapsedSeconds = (submittedAt - this.roundStartTime) / 1000;
     const remainingSeconds = Math.max(0, this.timerDuration - elapsedSeconds);
 
-    // Formula: (remainingSeconds / totalRoundSeconds) * (baseScore * 0.25)
-    // Maximum bonus: 25% of base score for immediate submission
+    // Formula: (remainingSeconds / totalRoundSeconds) * 2000
+    // Maximum bonus: 2000 points for immediate submission
     // Minimum bonus: 0 points at timer expiration
-    const maxTimeBonus = baseScore * 0.25;
-    const timeBonus = Math.floor((remainingSeconds / this.timerDuration) * maxTimeBonus);
+    const timeBonus = Math.floor((remainingSeconds / this.timerDuration) * 2000);
 
     return timeBonus;
   }
@@ -129,21 +126,16 @@ export class GameSession {
     // easy = level 1, medium = level 5, hard = level 10
     const levelEquivalent = this.difficulty === 'easy' ? 1 : this.difficulty === 'hard' ? 10 : 5;
 
-    // Ensure distance is valid and positive
-    if (!distance || distance < 0 || !isFinite(distance)) {
-      console.error(`[GameSession] Invalid distance calculated: ${distance} for city ${currentCity.name}`);
-    }
-
     const score = calculateScore(distance, currentCity.tier || 1, levelEquivalent);
 
-    // Calculate time bonus based on submission speed (25% of base score)
-    const timeBonus = this.calculateTimeBonus(submittedAt, score);
+    // Calculate time bonus based on submission speed
+    const timeBonus = this.calculateTimeBonus(submittedAt);
 
-    // Store guess data - ensure distance and score are in correct order
+    // Store guess data
     this.roundGuesses.set(socketId, {
       guess,
-      distance: distance, // Distance in kilometers
-      score: score, // Score calculated from distance
+      distance,
+      score,
       timeBonus,
       timestamp,
       submittedAt,
@@ -217,19 +209,13 @@ export class GameSession {
       const player = this.playerData.get(socketId);
       const playerScore = this.playerScores.get(socketId);
       if (player) {
-        // Verify data integrity - ensure distance and score are not swapped
-        let distance = guessData.distance;
-        let score = guessData.score;
-        const timeBonus = guessData.timeBonus || 0;
-        
-        
         results.push({
           playerId: socketId,
           playerName: player.name,
           guess: guessData.guess,
-          distance: distance, // Distance in kilometers
-          score: score, // Score calculated from distance
-          timeBonus: timeBonus,
+          distance: guessData.distance,
+          score: guessData.score,
+          timeBonus: guessData.timeBonus,
           totalScore: playerScore?.totalScore || 0, // Include cumulative total score with time bonus
         });
       }
