@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { MapContainer, Marker, GeoJSON, useMapEvents, Polyline, useMap, Tooltip } from 'react-leaflet';
+import { MapContainer, Marker, GeoJSON, useMapEvents, Polyline, useMap, Tooltip, TileLayer } from 'react-leaflet';
 import type { LatLngExpression, LeafletMouseEvent } from 'leaflet';
 import L from 'leaflet';
 import pinIconUrl from '@/assets/icons/pin.svg';
@@ -23,6 +23,14 @@ function MapPaneInitializer() {
     if (!map.getPane('pinsPane')) {
       const pinsPane = map.createPane('pinsPane');
       pinsPane.style.zIndex = '650'; // Above markers and tooltips
+    }
+    if (!map.getPane('countriesPane')) {
+      const countriesPane = map.createPane('countriesPane');
+      countriesPane.style.zIndex = '440'; // Below states so state borders render on top
+    }
+    if (!map.getPane('statesPane')) {
+      const statesPane = map.createPane('statesPane');
+      statesPane.style.zIndex = '450'; // Above countries for state borders, but fillOpacity: 0 so country fill shows
     }
   }, [map]);
 
@@ -104,13 +112,13 @@ interface GeoJSONFeatureCollection {
   features: GeoJSON.Feature[];
 }
 
-// Professional atlas-style color palette for Four Color Theorem
-// More muted, realistic colors that resemble actual world maps
+// Vibrant color palette for Four Color Theorem
+// Bright, distinct colors for clear country differentiation
 const FOUR_COLORS = [
-  '#D4C5B9', // Warm beige/tan (land mass)
-  '#C4D4C8', // Sage green (land mass)
-  '#D1D9D4', // Cool gray-green (land mass)
-  '#D9D1C7', // Warm gray (land mass)
+  '#FFB6C1', // Light pink - vibrant and distinct
+  '#87CEEB', // Sky blue - bright and clear
+  '#98D8C8', // Mint green - fresh and vibrant
+  '#F0E68C', // Khaki yellow - warm and bright
 ];
 
 /**
@@ -694,15 +702,15 @@ export default function InteractiveMap({
 
   /**
    * Style function for GeoJSON country boundaries
-   * Uses Four Color Theorem to ensure no adjacent countries share the same color
-   * Professional atlas-style appearance with subtle borders
+   * Uses Four Color Theorem - each country gets a distinct color from the 4-color palette
+   * More visible fill so colors are clear, but still allows map terrain to show through
    */
   const countryStyle = (feature?: GeoJSON.Feature) => {
     if (!feature?.properties?.NAME) {
       return {
         fillColor: FOUR_COLORS[0],
-        fillOpacity: 0.95,
-        color: '#8B7E74', // Darker brown border for definition
+        fillOpacity: 0.6, // More visible - colors should be clear
+        color: '#666666', // Medium gray border for clear definition
         weight: 1.2,
         opacity: 0.6,
       };
@@ -713,10 +721,10 @@ export default function InteractiveMap({
 
     return {
       fillColor,
-      fillOpacity: 0.95, // Slightly transparent for depth
-      color: '#8B7E74', // Darker brown border for realistic country lines
-      weight: 1.2, // Slightly thicker for visibility
-      opacity: 0.6, // Semi-transparent borders
+      fillOpacity: 0.6, // More visible fill - 4-color method should be clear
+      color: '#666666', // Medium gray border - clear but not overpowering
+      weight: 1.2, // Moderate border width
+      opacity: 0.9, // Clear borders
     };
   };
 
@@ -733,15 +741,15 @@ export default function InteractiveMap({
 
   /**
    * Style function for USA state boundaries
-   * Shows only the outlines, no fill
+   * Subtle overlay - transparent fill with thin borders
    */
   const usStateStyle = () => {
     return {
       fillColor: 'transparent',
       fillOpacity: 0,
-      color: '#555555', // Dark gray border for state lines
-      weight: 1.5,
-      opacity: 0.5,
+      color: '#999999', // Lighter gray for state borders
+      weight: 0.8, // Thinner than country borders
+      opacity: 0.6, // More transparent - subtle state divisions
     };
   };
 
@@ -770,8 +778,8 @@ export default function InteractiveMap({
       maxZoom={10}
       maxBounds={maxBounds}
       maxBoundsViscosity={1.0}
-      className={`${className} bg-[#A8BFCF]`}
-      style={{ backgroundColor: '#A8BFCF' }}
+      className={`${className} bg-[#4A90E2]`}
+      style={{ backgroundColor: '#4A90E2' }}
       zoomControl={false}
       preferCanvas={true}
       zoomAnimation={true}
@@ -785,25 +793,36 @@ export default function InteractiveMap({
       {/* Initialize custom panes for proper z-index layering */}
       <MapPaneInitializer />
 
-      {/* Country boundaries with Four Color Theorem coloring - MUST BE FIRST */}
+      {/* Realistic map tiles - Using CartoDB Positron (no labels) for clean look */}
+      {/* Alternative: Use Stamen Toner Lite or CartoDB Positron No Labels */}
+      <TileLayer
+        url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        maxZoom={19}
+        tileSize={256}
+        zoomOffset={0}
+      />
+
+      {/* Country boundaries with 4-color method - render in countriesPane so fill is visible */}
       {countriesData && (
         <GeoJSON
           key="countries"
           data={countriesData}
           style={countryStyle}
           onEachFeature={onEachCountry}
-          pane="tilePane"
+          pane="countriesPane"
         />
       )}
 
-      {/* USA state boundaries - outline only, rendered on top of countries but below markers */}
+      {/* USA state boundaries - borders only, render in statesPane below countries */}
+      {/* States have fillOpacity: 0 and lower z-index so USA country color shows through */}
       {usStatesData && (
         <GeoJSON
           key="us-states"
           data={usStatesData}
           style={usStateStyle}
           onEachFeature={onEachUsState}
-          pane="tilePane"
+          pane="statesPane"
         />
       )}
 
@@ -835,30 +854,34 @@ export default function InteractiveMap({
               color: '#ef4444', // Solid red (red-500)
               weight: 4,
               opacity: lineOpacity,
+              dashArray: '10, 8',
               lineCap: 'round',
               lineJoin: 'round',
+              fill: false,
+              fillOpacity: 0,
             }}
             pane="linesPane"
           />
-          {/* Distance label at midpoint of line - renders on top using tooltipPane */}
-          {distance !== undefined && (
-            <Marker
-              position={[
-                (displayPinPosition.lat + targetLocation.lat) / 2,
-                (displayPinPosition.lng + targetLocation.lng) / 2,
-              ]}
-              icon={
-                new L.DivIcon({
-                  html: `<div class="distance-label" style="opacity: ${lineOpacity}">${distance.toLocaleString('en-US')} km</div>`,
-                  className: 'distance-label-container',
-                  iconSize: [120, 30],
-                  iconAnchor: [60, 15],
-                })
-              }
-              pane="tooltipPane"
-            />
-          )}
         </>
+      )}
+
+      {/* Distance label at midpoint of line - renders on top using tooltipPane */}
+      {distance !== undefined && (
+        <Marker
+          position={[
+            (displayPinPosition.lat + targetLocation.lat) / 2,
+            (displayPinPosition.lng + targetLocation.lng) / 2,
+          ]}
+          icon={
+            new L.DivIcon({
+              html: `<div class="distance-label" style="opacity: ${lineOpacity}">${distance.toLocaleString('en-US')} km</div>`,
+              className: 'distance-label-container',
+              iconSize: [120, 30],
+              iconAnchor: [60, 15],
+            })
+          }
+          pane="tooltipPane"
+        />
       )}
 
       {/* Draggable pin marker (only rendered when position is set) - renders above line */}
@@ -888,9 +911,11 @@ export default function InteractiveMap({
             color: playerGuess.color,
             weight: 3,
             opacity: lineOpacity * 0.7,
-            dashArray: '8, 6',
+            dashArray: '10, 8',
             lineCap: 'round',
             lineJoin: 'round',
+            fill: false,
+            fillOpacity: 0,
           }}
           pane="linesPane"
         />
@@ -919,6 +944,7 @@ export default function InteractiveMap({
           </Tooltip>
         </Marker>
       ))}
+
 
       {/* Target location marker (shown after guess confirmation) - RED color - renders above line */}
       {targetLocation && (

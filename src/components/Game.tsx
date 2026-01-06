@@ -42,6 +42,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   // Level announcement and city prompt - both start hidden, shown after game starts
   const [showLevelAnnouncement, setShowLevelAnnouncement] = useState(false);
   const [showAnimatedPrompt, setShowAnimatedPrompt] = useState(false);
+  const [animationCompleted, setAnimationCompleted] = useState(false);
   // Store pending round start data until city animation completes
   const [pendingRoundStart, setPendingRoundStart] = useState<{
     roundNumber: number;
@@ -149,6 +150,8 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
     // Reset map
     setMapKey(prev => prev + 1);
     setCurrentGuess(null);
+    // Hide level announcement when advancing level
+    setShowLevelAnnouncement(false);
   };
 
   /**
@@ -249,6 +252,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
 
     // Show animated city prompt for multiplayer
     setShowAnimatedPrompt(true);
+    setAnimationCompleted(false); // Reset animation state
   });
 
   /**
@@ -284,6 +288,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
 
     // Show animated city prompt for new round
     setShowAnimatedPrompt(true);
+    setAnimationCompleted(false); // Reset animation state for new round
   });
 
   /**
@@ -435,6 +440,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
     setCurrentGuess(null);
     setShowLevelAnnouncement(false);
     setShowAnimatedPrompt(true);
+    setAnimationCompleted(false); // Reset animation state
     setShowDisconnectedModal(false);
     setDisconnectedPlayerName('');
 
@@ -640,6 +646,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                   showInitialAnimation
                   onAnimationComplete={() => {
                     setShowAnimatedPrompt(false);
+                    setAnimationCompleted(true);
                     // Start timer after animation completes - use current time so timer starts from full duration
                     if (pendingRoundStart) {
                       dispatch({
@@ -654,11 +661,11 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                     }
                   }}
                 />
-              ) : (
+              ) : animationCompleted ? (
                 <div className="absolute top-4 left-4 sm:left-auto sm:right-4 z-20">
                   <CityPrompt cityName={currentCity.name} country={currentCity.country} />
                 </div>
-              )
+              ) : null
             )}
 
             {/* Results overlay - Single-player (ROUND_COMPLETE only) */}
@@ -769,14 +776,17 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
           </div>
         )}
 
-      {/* Level Announcement Overlay (single-player only) */}
-      {state.gameMode === 'single-player' && showLevelAnnouncement && (
+      {/* Level Announcement Overlay (single-player only) - Don't show when level complete screen is visible */}
+      {state.gameMode === 'single-player' && 
+       showLevelAnnouncement && 
+       state.gameStatus !== GameStatus.LEVEL_COMPLETE && (
         <LevelAnnouncement
           level={state.currentLevel}
           round={state.currentRound}
           onComplete={() => {
             setShowLevelAnnouncement(false);
             setShowAnimatedPrompt(true);
+            setAnimationCompleted(false); // Reset animation state
           }}
         />
       )}

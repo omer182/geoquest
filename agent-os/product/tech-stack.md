@@ -14,8 +14,10 @@
 
 ## Map Integration
 - **Map Library:** Leaflet.js with React-Leaflet (free, open-source alternative to Google Maps with full customization)
-- **Map Tiles:** OpenStreetMap tiles (free) or Mapbox (better styling, free tier available)
-- **Custom Map Styling:** GeoJSON for country boundaries with custom colored outlines and no labels
+- **Map Tiles:** CartoDB Positron No Labels (`https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png`) - realistic terrain without labels (critical for guessing game)
+- **Custom Map Styling:** GeoJSON for country boundaries with vibrant 4-color palette (Four Color Theorem) overlaid on realistic map tiles
+- **Country Colors:** Light pink, sky blue, mint green, khaki yellow - 60% fill opacity
+- **USA States:** Rendered separately with subtle borders (0.8px, transparent fill)
 - **Distance Calculation:** Haversine formula implementation for accurate geographic distance between coordinates
 
 ## Backend & Real-Time

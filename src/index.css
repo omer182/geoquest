@@ -2,6 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide all text labels on map tiles - critical for guessing game */
+.leaflet-tile-pane img {
+  /* This targets the tile images, but labels are baked into the images */
+}
+
+/* Hide text elements in map tiles - labels are part of the tile images */
+.leaflet-container {
+  /* Force hide any text overlays that might appear */
+}
+
+/* Hide any text labels that might be rendered separately */
+.leaflet-tile-container img {
+  /* Labels are baked into OpenStreetMap tiles, so we need a different approach */
+}
+
+/* Use CSS filter to reduce label visibility - alternative approach */
+.leaflet-tile-pane {
+  filter: contrast(1.1) brightness(1.05);
+}
+
 /* Ensure polylines render above ALL map layers including GeoJSON */
 .leaflet-pane.leaflet-overlay-pane {
   z-index: 650 !important;
@@ -16,6 +36,12 @@
   position: relative !important;
   z-index: 650 !important;
   transition: opacity 1.5s ease-out !important;
+  fill: none !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  /* Ensure no border or outline effects */
+  outline: none !important;
+  border: none !important;
 }
 
 /* Fade-in animation for distance line */

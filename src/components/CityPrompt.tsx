@@ -97,8 +97,10 @@ export default function CityPrompt({
       }`}
     >
       <div
-        className={`bg-dark-elevated/90 backdrop-blur-sm rounded-lg shadow-lg border border-primary/30 transition-all duration-700 ease-out ${
-          isSmall ? 'px-3 sm:px-4 py-2.5' : 'p-6 sm:p-8'
+        className={`rounded-xl shadow-2xl transition-all duration-700 ease-out ${
+          isSmall
+            ? 'bg-dark-elevated/90 backdrop-blur-sm border border-primary/30 px-3 sm:px-4 py-2.5'
+            : 'bg-dark-elevated border-2 border-primary p-6 sm:p-8'
         }`}
       >
         <div className="text-center space-y-1 sm:space-y-2">
@@ -106,7 +108,7 @@ export default function CityPrompt({
             className={`font-semibold transition-all duration-700 ease-out ${
               isSmall
                 ? 'text-sm sm:text-lg text-primary inline truncate max-w-[140px] sm:max-w-none'
-                : 'text-2xl sm:text-3xl md:text-5xl text-white block'
+                : 'text-2xl sm:text-3xl md:text-5xl text-primary block font-bold'
             }`}
           >
             {cityName}
@@ -115,7 +117,7 @@ export default function CityPrompt({
             className={`transition-all duration-700 ease-out ${
               isSmall
                 ? 'text-xs sm:text-base text-gray-300 inline truncate max-w-[100px] sm:max-w-none'
-                : 'text-xl sm:text-2xl md:text-4xl text-gray-400 block'
+                : 'text-xl sm:text-2xl md:text-4xl text-gray-300 block font-semibold'
             }`}
           >
             {isSmall && ', '}

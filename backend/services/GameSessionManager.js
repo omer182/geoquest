@@ -85,11 +85,17 @@ export class GameSession {
   /**
    * Calculate time bonus based on submission speed
    * Time bonus is 25% of the base score, scaled by how quickly the guess was submitted
+   * If base score is 0, time bonus is also 0
    * @param {number} submittedAt - Timestamp when guess was submitted
    * @param {number} baseScore - The base score (before time bonus) to calculate 25% from
    * @returns {number} Time bonus points (0 to 25% of baseScore)
    */
   calculateTimeBonus(submittedAt, baseScore) {
+    // If no distance score, no time bonus
+    if (!baseScore || baseScore === 0) {
+      return 0;
+    }
+
     if (!this.roundStartTime) {
       return 0;
     }
