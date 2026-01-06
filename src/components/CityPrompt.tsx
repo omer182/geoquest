@@ -91,14 +91,14 @@ export default function CityPrompt({
       className={`fixed z-50 pointer-events-none transition-all duration-700 ease-in-out ${
         isCentered
           ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'
-          : 'top-2 sm:top-4 right-2 sm:right-4 translate-x-0 translate-y-0'
+          : 'top-4 right-4 translate-x-0 translate-y-0'
       } ${
         animationPhase === 'fadeIn' ? 'opacity-0' : 'opacity-100'
       }`}
     >
       <div
-        className={`bg-dark-elevated rounded-xl shadow-2xl border-2 border-primary transition-all duration-700 ease-out ${
-          isSmall ? 'p-2 px-3 sm:p-3 sm:px-6' : 'p-6 sm:p-8'
+        className={`bg-dark-elevated/90 backdrop-blur-sm rounded-lg shadow-lg border border-primary/30 transition-all duration-700 ease-out ${
+          isSmall ? 'px-3 sm:px-4 py-2.5' : 'p-6 sm:p-8'
         }`}
       >
         <div className="text-center space-y-1 sm:space-y-2">

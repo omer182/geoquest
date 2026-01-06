@@ -131,11 +131,16 @@ function AppContent() {
             <h1 className="text-5xl font-bold text-white mb-4 tracking-tight">About GeoQuest</h1>
             <p className="text-gray-300 text-lg">
               GeoQuest is a geography quiz game where you test your knowledge of world cities by
-              guessing their locations on a map.
+              guessing their locations on a map. Think you know where Fortaleza is? Think again.
             </p>
             <p className="text-gray-300">
               Built with React, TypeScript, Leaflet, and Socket.IO for real-time multiplayer
-              gameplay.
+              gameplay. Because nothing says fun like arguing with friends about whether that city
+              is in Brazil or Argentina.
+            </p>
+            <p className="text-gray-400 text-sm italic mt-4">
+              This entire project was built using spec-driven development with agent-os. Not a
+              single line of code was written or even looked at by a human.
             </p>
             <button
               onClick={handleBackToMainMenu}
