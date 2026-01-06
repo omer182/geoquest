@@ -600,8 +600,11 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                 <GameInfoCard
                   level={state.currentLevel}
                   round={state.currentRound}
-                  score={state.totalScore}
+                  currentScore={0}
+                  totalScore={state.totalScore}
+                  requiredScore={getLevelThreshold(state.currentLevel)}
                 />
+                
               </div>
             )}
 
@@ -620,15 +623,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
             {state.gameMode === 'multiplayer' &&
               state.gameStatus === GameStatus.GUESSING &&
               state.multiplayerGameState?.hasGuessed && (
-                <WaitingIndicator
-                  message="Waiting for other players..."
-                  totalPlayers={state.currentRoom?.players.length || 0}
-                  playersGuessed={
-                    1 +
-                    Array.from(state.multiplayerGameState.otherPlayersGuessed.values()).filter((g) => g)
-                      .length
-                  }
-                />
+                <WaitingIndicator />
               )}
 
             {/* City Prompt - Show city name and country */}
@@ -751,6 +746,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
       {state.gameMode === 'single-player' && showLevelAnnouncement && (
         <LevelAnnouncement
           level={state.currentLevel}
+          round={state.currentRound}
           onComplete={() => {
             setShowLevelAnnouncement(false);
             setShowAnimatedPrompt(true);
