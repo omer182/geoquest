@@ -5,6 +5,7 @@ import L from 'leaflet';
 import pinIconUrl from '@/assets/icons/pin.svg';
 import pinRedIconUrl from '@/assets/icons/pin-red.svg';
 import countriesGeoJSON from '@/assets/geo/countries.geojson?url';
+import usStatesGeoJSON from '@/assets/geo/us-states.geojson?url';
 
 /**
  * Component to initialize custom map panes with explicit z-index values
@@ -427,7 +428,7 @@ export default function InteractiveMap({
       });
 
     // Fetch USA states GeoJSON data
-    fetch('/src/assets/geo/us-states.geojson')
+    fetch(usStatesGeoJSON)
       .then(response => response.json())
       .then((data: GeoJSONFeatureCollection) => {
         console.log('USA states GeoJSON loaded, features count:', data.features.length);
