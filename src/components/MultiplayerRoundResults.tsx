@@ -87,15 +87,15 @@ export default function MultiplayerRoundResults({
     setHasClickedContinue(true);
   };
 
-  // Sort results by round score + time bonus (descending)
+  // Sort results by total score (cumulative, descending - highest first)
   const sortedResults = [...results].sort((a, b) => {
-    const scoreA = a.score + (a.timeBonus || 0);
-    const scoreB = b.score + (b.timeBonus || 0);
-    return scoreB - scoreA;
+    const totalA = a.totalScore || 0;
+    const totalB = b.totalScore || 0;
+    return totalB - totalA;
   });
 
-  // Find winner (highest round score + time bonus)
-  const winnerId = sortedResults[0]?.playerId;
+  // Crown always goes to the top player (first in sorted list - highest total score)
+  const winnerId = sortedResults.length > 0 ? sortedResults[0].playerId : null;
 
   // Check if this is the final round
   const isFinalRound = roundNumber === totalRounds;

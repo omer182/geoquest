@@ -84,10 +84,12 @@ export class GameSession {
 
   /**
    * Calculate time bonus based on submission speed
+   * Time bonus is 25% of the base score, scaled by how quickly the guess was submitted
    * @param {number} submittedAt - Timestamp when guess was submitted
-   * @returns {number} Time bonus points (0-2000)
+   * @param {number} baseScore - The base score (before time bonus) to calculate 25% from
+   * @returns {number} Time bonus points (0 to 25% of baseScore)
    */
-  calculateTimeBonus(submittedAt) {
+  calculateTimeBonus(submittedAt, baseScore) {
     if (!this.roundStartTime) {
       return 0;
     }
@@ -95,10 +97,11 @@ export class GameSession {
     const elapsedSeconds = (submittedAt - this.roundStartTime) / 1000;
     const remainingSeconds = Math.max(0, this.timerDuration - elapsedSeconds);
 
-    // Formula: (remainingSeconds / totalRoundSeconds) * 2000
-    // Maximum bonus: 2000 points for immediate submission
+    // Formula: (remainingSeconds / totalRoundSeconds) * (baseScore * 0.25)
+    // Maximum bonus: 25% of base score for immediate submission
     // Minimum bonus: 0 points at timer expiration
-    const timeBonus = Math.floor((remainingSeconds / this.timerDuration) * 2000);
+    const maxTimeBonus = baseScore * 0.25;
+    const timeBonus = Math.floor((remainingSeconds / this.timerDuration) * maxTimeBonus);
 
     return timeBonus;
   }
@@ -128,8 +131,8 @@ export class GameSession {
 
     const score = calculateScore(distance, currentCity.tier || 1, levelEquivalent);
 
-    // Calculate time bonus based on submission speed
-    const timeBonus = this.calculateTimeBonus(submittedAt);
+    // Calculate time bonus based on submission speed (25% of base score)
+    const timeBonus = this.calculateTimeBonus(submittedAt, score);
 
     // Store guess data
     this.roundGuesses.set(socketId, {

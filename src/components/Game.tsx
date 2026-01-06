@@ -42,6 +42,12 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   // Level announcement and city prompt - both start hidden, shown after game starts
   const [showLevelAnnouncement, setShowLevelAnnouncement] = useState(false);
   const [showAnimatedPrompt, setShowAnimatedPrompt] = useState(false);
+  // Store pending round start data until city animation completes
+  const [pendingRoundStart, setPendingRoundStart] = useState<{
+    roundNumber: number;
+    startTime: number;
+    timerDuration: number;
+  } | null>(null);
 
   // Disconnection modal state
   const [showDisconnectedModal, setShowDisconnectedModal] = useState(false);
@@ -255,17 +261,23 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   }>('round:started', (data) => {
     if (state.gameMode !== 'multiplayer') return;
 
-    console.log('[Game] Round started', data);
-
     // Reset map for new round (clears pins from previous round)
     setMapKey((prev) => prev + 1);
     setCurrentGuess(null);
 
+    // Store round start data but don't set roundStartTime yet - wait for animation
+    setPendingRoundStart({
+      roundNumber: data.roundNumber,
+      startTime: data.startTime,
+      timerDuration: data.timerDuration,
+    });
+
+    // Update round number and other state, but without roundStartTime
     dispatch({
       type: 'MULTIPLAYER_ROUND_START',
       payload: {
         roundNumber: data.roundNumber,
-        startTime: data.startTime,
+        startTime: null, // Don't start timer yet
         timerDuration: data.timerDuration,
       },
     });
@@ -619,13 +631,6 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                 />
               )}
 
-            {/* Multiplayer Waiting Indicator - Show after player submits guess */}
-            {state.gameMode === 'multiplayer' &&
-              state.gameStatus === GameStatus.GUESSING &&
-              state.multiplayerGameState?.hasGuessed && (
-                <WaitingIndicator />
-              )}
-
             {/* City Prompt - Show city name and country */}
             {currentCity && state.gameStatus === GameStatus.GUESSING && (
               showAnimatedPrompt ? (
@@ -633,10 +638,24 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                   cityName={currentCity.name}
                   country={currentCity.country}
                   showInitialAnimation
-                  onAnimationComplete={() => setShowAnimatedPrompt(false)}
+                  onAnimationComplete={() => {
+                    setShowAnimatedPrompt(false);
+                    // Start timer after animation completes - use current time so timer starts from full duration
+                    if (pendingRoundStart) {
+                      dispatch({
+                        type: 'MULTIPLAYER_ROUND_START',
+                        payload: {
+                          roundNumber: pendingRoundStart.roundNumber,
+                          startTime: Date.now(), // Start timer now, not from server time
+                          timerDuration: pendingRoundStart.timerDuration,
+                        },
+                      });
+                      setPendingRoundStart(null);
+                    }
+                  }}
                 />
               ) : (
-                <div className="absolute top-20 left-4 sm:top-4 sm:left-auto sm:right-4 z-20">
+                <div className="absolute top-4 left-4 sm:left-auto sm:right-4 z-20">
                   <CityPrompt cityName={currentCity.name} country={currentCity.country} />
                 </div>
               )
@@ -681,12 +700,20 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                 </div>
               )}
 
-            {/* Confirm Button - Only show during GUESSING state when pin is placed */}
-            {state.gameStatus === GameStatus.GUESSING && currentGuess && (
-              <ConfirmButton
-                onConfirm={handleConfirmGuess}
-                disabled={!currentGuess}
-              />
+            {/* Confirm Button - Show during GUESSING state when pin is placed, or show waiting state after submit */}
+            {state.gameStatus === GameStatus.GUESSING && (
+              state.gameMode === 'multiplayer' && state.multiplayerGameState?.hasGuessed ? (
+                <ConfirmButton
+                  onConfirm={() => {}}
+                  disabled={true}
+                  isWaiting={true}
+                />
+              ) : currentGuess ? (
+                <ConfirmButton
+                  onConfirm={handleConfirmGuess}
+                  disabled={!currentGuess}
+                />
+              ) : null
             )}
           </div>
         </>
