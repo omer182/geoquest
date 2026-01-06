@@ -1,15 +1,30 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import MultiplayerRoundResults from './MultiplayerRoundResults';
 import { PlayerRoundResult } from '../types/game';
 
+// Mock useSocket hook
+vi.mock('../hooks/useSocket', () => ({
+  useSocket: () => ({
+    state: {
+      socket: {
+        emit: vi.fn(),
+      },
+      isConnected: true,
+    },
+    socket: {
+      emit: vi.fn(),
+    },
+  }),
+}));
+
 describe('MultiplayerRoundResults - 5 Player Support', () => {
   const create5PlayerResults = (): PlayerRoundResult[] => [
-    { playerId: 'p1', playerName: 'Alice', distance: 50, score: 950 },
-    { playerId: 'p2', playerName: 'Bob', distance: 100, score: 850 },
-    { playerId: 'p3', playerName: 'Charlie', distance: 200, score: 700 },
-    { playerId: 'p4', playerName: 'David', distance: 300, score: 600 },
-    { playerId: 'p5', playerName: 'Eve', distance: 500, score: 400 },
+    { playerId: 'p1', playerName: 'Alice', distance: 50, score: 950, timeBonus: 100, totalScore: 1050 },
+    { playerId: 'p2', playerName: 'Bob', distance: 100, score: 850, timeBonus: 80, totalScore: 930 },
+    { playerId: 'p3', playerName: 'Charlie', distance: 200, score: 700, timeBonus: 60, totalScore: 760 },
+    { playerId: 'p4', playerName: 'David', distance: 300, score: 600, timeBonus: 40, totalScore: 640 },
+    { playerId: 'p5', playerName: 'Eve', distance: 500, score: 400, timeBonus: 20, totalScore: 420 },
   ];
 
   it('renders 5 player rows with correct sorting', () => {
@@ -24,7 +39,7 @@ describe('MultiplayerRoundResults - 5 Player Support', () => {
         targetCityName="Tokyo"
         countdown={null}
         roundScore={950}
-        totalScore={950}
+        totalScore={1050}
       />
     );
 
@@ -35,12 +50,9 @@ describe('MultiplayerRoundResults - 5 Player Support', () => {
     expect(screen.getByText('David')).toBeInTheDocument();
     expect(screen.getByText('Eve')).toBeInTheDocument();
 
-    // Check scores are displayed
-    expect(screen.getByText('950')).toBeInTheDocument();
-    expect(screen.getByText('850')).toBeInTheDocument();
-    expect(screen.getByText('700')).toBeInTheDocument();
-    expect(screen.getByText('600')).toBeInTheDocument();
-    expect(screen.getByText('400')).toBeInTheDocument();
+    // Check scores are displayed (with commas if > 1000)
+    expect(screen.getByText(/1,050/)).toBeInTheDocument();
+    expect(screen.getByText(/950/)).toBeInTheDocument();
   });
 
   it('displays crown emoji for winner (highest score)', () => {
@@ -55,7 +67,7 @@ describe('MultiplayerRoundResults - 5 Player Support', () => {
         targetCityName="Paris"
         countdown={null}
         roundScore={700}
-        totalScore={700}
+        totalScore={760}
       />
     );
 
@@ -75,7 +87,7 @@ describe('MultiplayerRoundResults - 5 Player Support', () => {
         targetCityName="London"
         countdown={null}
         roundScore={700}
-        totalScore={1400}
+        totalScore={1520}
       />
     );
 

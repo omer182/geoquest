@@ -112,6 +112,7 @@ export enum SocketErrorCode {
   GAME_IN_PROGRESS = 'GAME_IN_PROGRESS',
   VALIDATION_ERROR = 'VALIDATION_ERROR',
   INTERNAL_ERROR = 'INTERNAL_ERROR',
+  GAME_NOT_FOUND = 'GAME_NOT_FOUND',
 }
 
 /**
@@ -195,6 +196,21 @@ export interface RestoreSessionRequest {
    * Room code
    */
   roomCode: string;
+}
+
+/**
+ * Payload for round:player_ready event
+ */
+export interface RoundPlayerReadyRequest {
+  /**
+   * Room code
+   */
+  roomCode: string;
+
+  /**
+   * Player ID who clicked continue
+   */
+  playerId: string;
 }
 
 // ============================================
@@ -336,6 +352,36 @@ export interface PongPayload {
   serverTime: number;
 }
 
+/**
+ * Response for round:player_ready event
+ */
+export interface RoundPlayerReadyResponse {
+  /**
+   * Number of players ready for next round
+   */
+  readyCount: number;
+
+  /**
+   * Total number of players in the room
+   */
+  totalPlayers: number;
+}
+
+/**
+ * Broadcast when all players are ready to advance
+ */
+export interface RoundAllReadyEvent {
+  /**
+   * Room code
+   */
+  roomCode: string;
+
+  /**
+   * Round number to advance to
+   */
+  nextRound: number;
+}
+
 // ============================================
 // Event Name Constants
 // ============================================
@@ -371,12 +417,16 @@ export const SOCKET_EVENTS = {
   PLAYER_READY_CHANGED: 'player:readyChanged',
   SESSION_RESTORED: 'session:restored',
 
-  // Future game events (placeholders for Phase 4)
+  // Game events
   GAME_START: 'game:start',
   GAME_ROUND_START: 'game:roundStart',
   GAME_GUESS_SUBMITTED: 'game:guessSubmitted',
   GAME_ROUND_COMPLETE: 'game:roundComplete',
   GAME_COMPLETE: 'game:complete',
+
+  // Round advancement events
+  ROUND_PLAYER_READY: 'round:player_ready',
+  ROUND_ALL_READY: 'round:all_ready',
 } as const;
 
 /**

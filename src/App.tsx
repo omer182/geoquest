@@ -113,7 +113,7 @@ function AppContent() {
       return <RoomLobby onGameStart={handleGameStart} onLeave={handleBackToMainMenu} />;
 
     case 'game':
-      return <Game onBackToMainMenu={handleBackToMainMenu} onBackToLobby={() => setCurrentScreen('room-lobby')} />;
+      return <Game onBackToMainMenu={handleBackToMainMenu} onBackToLobby={() => setCurrentScreen('multiplayer-submenu')} />;
 
     case 'about':
       return (

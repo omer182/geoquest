@@ -264,7 +264,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           roundResults: action.payload.results,
           standings: action.payload.standings,
           isWaitingForNextRound: true,
-          autoAdvanceCountdown: 5, // Start at 5 seconds
+          autoAdvanceCountdown: 10, // Start at 10 seconds
         },
       };
     }

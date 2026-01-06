@@ -1,4 +1,7 @@
+import { useState, useEffect } from 'react';
 import { PlayerRoundResult } from '../types/game';
+import { useSocket } from '../hooks/useSocket';
+import { SOCKET_EVENTS } from '../types/socket-events';
 
 interface MultiplayerRoundResultsProps {
   /** Current round number */
@@ -17,6 +20,8 @@ interface MultiplayerRoundResultsProps {
   roundScore: number;
   /** Current player's total score across all rounds */
   totalScore: number;
+  /** Room code for multiplayer session */
+  roomCode: string;
 }
 
 /**
@@ -28,9 +33,9 @@ function formatNumber(num: number): string {
 
 /**
  * MultiplayerRoundResults component displays results for all players after a round.
- * Shows a table with player names, distances, and scores.
+ * Shows a table with player names, distances, scores, and time bonuses.
  * Highlights the current player's row and marks the winner with a crown.
- * Displays auto-advance countdown at the bottom.
+ * Displays auto-advance countdown or continue button at the bottom.
  */
 export default function MultiplayerRoundResults({
   roundNumber,
@@ -41,15 +46,63 @@ export default function MultiplayerRoundResults({
   countdown,
   roundScore,
   totalScore,
+  roomCode,
 }: MultiplayerRoundResultsProps) {
-  // Sort results by score (descending)
-  const sortedResults = [...results].sort((a, b) => b.score - a.score);
+  const { state: socketState } = useSocket();
+  const socket = socketState.socket;
 
-  // Find winner (highest score)
+  const [hasClickedContinue, setHasClickedContinue] = useState(false);
+  const [, setTick] = useState(0);
+
+  // Force re-render every 100ms to update countdown display
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTick((prev) => prev + 1);
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Reset continue state only when round number changes (new round)
+  useEffect(() => {
+    setHasClickedContinue(false);
+  }, [roundNumber]);
+
+  // Handle continue button click
+  const handleContinue = () => {
+    if (!socket || hasClickedContinue) return;
+
+    console.log('[MultiplayerRoundResults] Continue clicked, emitting round:player_ready', {
+      roomCode,
+      playerId: currentPlayerId,
+    });
+
+    // Emit round:player_ready event to server
+    socket.emit(SOCKET_EVENTS.ROUND_PLAYER_READY, {
+      roomCode,
+      playerId: currentPlayerId,
+    });
+
+    // Hide countdown for current player
+    setHasClickedContinue(true);
+  };
+
+  // Sort results by round score + time bonus (descending)
+  const sortedResults = [...results].sort((a, b) => {
+    const scoreA = a.score + (a.timeBonus || 0);
+    const scoreB = b.score + (b.timeBonus || 0);
+    return scoreB - scoreA;
+  });
+
+  // Find winner (highest round score + time bonus)
   const winnerId = sortedResults[0]?.playerId;
 
+  // Check if this is the final round
+  const isFinalRound = roundNumber === totalRounds;
+
   return (
-    <div className="absolute inset-x-4 bottom-4 z-40 flex items-end justify-center pointer-events-none">
+    <div className="absolute inset-x-4 bottom-4 z-40 flex flex-col items-center justify-end pointer-events-none gap-3">
+      {/* Results Card */}
       <div className="bg-dark-elevated/95 backdrop-blur-sm rounded-lg shadow-2xl p-2 sm:p-3 animate-slide-up border border-primary/30 w-full max-w-[280px] sm:max-w-sm pointer-events-auto">
         {/* Header */}
         <div className="text-center mb-2">
@@ -71,7 +124,10 @@ export default function MultiplayerRoundResults({
                   <span className="sm:hidden">D.</span>
                 </th>
                 <th className="px-2 py-1 text-right text-[10px] sm:text-xs font-semibold text-gray-400 uppercase">
-                  Score
+                  Round
+                </th>
+                <th className="px-2 py-1 text-right text-[10px] sm:text-xs font-semibold text-gray-400 uppercase">
+                  Total
                 </th>
               </tr>
             </thead>
@@ -79,6 +135,9 @@ export default function MultiplayerRoundResults({
               {sortedResults.map((result, index) => {
                 const isCurrentPlayer = result.playerId === currentPlayerId;
                 const isWinner = result.playerId === winnerId;
+                const timeBonus = result.timeBonus || 0;
+                const roundTotal = result.score + timeBonus;
+                const cumulativeTotal = result.totalScore || 0;
 
                 return (
                   <tr
@@ -90,7 +149,7 @@ export default function MultiplayerRoundResults({
                     <td className="px-2 py-1">
                       <div className="flex items-center gap-1">
                         {isWinner && <span className="text-xs">👑</span>}
-                        <span className="font-semibold text-white text-[11px] sm:text-xs">
+                        <span className="font-semibold text-white text-[11px] sm:text-xs truncate max-w-[80px] sm:max-w-none">
                           {result.playerName}
                           {isCurrentPlayer && (
                             <span className="ml-1 text-[10px] text-gray-400">(You)</span>
@@ -100,12 +159,19 @@ export default function MultiplayerRoundResults({
                     </td>
                     <td className="px-2 py-1 text-right">
                       <span className="text-primary font-semibold text-[11px] sm:text-xs">
-                        {formatNumber(Math.round(result.distance))}
+                        {result.distance !== null && result.distance !== undefined
+                          ? formatNumber(Math.round(result.distance))
+                          : '—'}
                       </span>
                     </td>
                     <td className="px-2 py-1 text-right">
                       <span className="text-green-400 font-bold text-xs sm:text-sm">
-                        {formatNumber(result.score)}
+                        {formatNumber(roundTotal)}
+                      </span>
+                    </td>
+                    <td className="px-2 py-1 text-right">
+                      <span className="text-white font-bold text-xs sm:text-sm">
+                        {formatNumber(cumulativeTotal)}
                       </span>
                     </td>
                   </tr>
@@ -118,24 +184,38 @@ export default function MultiplayerRoundResults({
         {/* Your Score Summary */}
         <div className="bg-dark-surface rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 mb-2">
           <div className="flex items-center justify-between text-[11px] sm:text-xs">
-            <span className="text-gray-400">Round Points:</span>
-            <span className="font-bold text-green-400">+{formatNumber(roundScore)}</span>
-          </div>
-          <div className="flex items-center justify-between text-[11px] sm:text-xs mt-0.5 sm:mt-1">
-            <span className="text-gray-400">Total Score:</span>
-            <span className="font-bold text-white">{formatNumber(totalScore)}</span>
+            <span className="text-gray-300">Total Score:</span>
+            <span className="font-bold text-white text-sm sm:text-base">{formatNumber(totalScore)}</span>
           </div>
         </div>
 
-        {/* Countdown */}
-        {countdown !== null && (
+        {/* Calculating Message (final round only) */}
+        {countdown !== null && isFinalRound && (
           <div className="text-center">
-            <p className="text-xs sm:text-sm text-gray-400">
-              Next round in <span className="font-bold text-primary">{countdown}</span>...
+            <p className="text-xs sm:text-sm text-primary animate-pulse">
+              Calculating results...
             </p>
           </div>
         )}
       </div>
+
+      {/* Continue Button */}
+      {countdown !== null && !isFinalRound && (
+        <button
+          onClick={handleContinue}
+          disabled={hasClickedContinue}
+          className={`${
+            hasClickedContinue
+              ? 'bg-gray-600 cursor-wait'
+              : 'bg-gradient-to-r from-teal-600 to-blue-600 hover:shadow-xl transform hover:scale-105'
+          } text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-200 min-h-[44px] text-base sm:text-lg animate-slide-up pointer-events-auto`}
+          aria-label="Continue to next round"
+        >
+          {hasClickedContinue
+            ? `Waiting for other players... (${countdown})`
+            : `Continue (${countdown})`}
+        </button>
+      )}
     </div>
   );
 }
