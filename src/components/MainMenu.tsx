@@ -12,7 +12,7 @@ interface MainMenuProps {
  */
 export default function MainMenu({ onSinglePlayer, onMultiplayer, onAbout }: MainMenuProps) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white p-4 relative overflow-hidden">
+    <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white p-4 relative overflow-hidden">
       {/* Enhanced gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-950/20 to-transparent pointer-events-none" />
 
@@ -34,20 +34,20 @@ export default function MainMenu({ onSinglePlayer, onMultiplayer, onAbout }: Mai
 
         {/* Menu Buttons */}
         <div className="space-y-2">
-          {/* Single Player Button */}
+          {/* Solo Run Button */}
           <button
             onClick={onSinglePlayer}
             className="group relative w-full py-3 px-4 bg-primary hover:bg-primary-dark text-white font-semibold text-base rounded-lg transition-all duration-200 shadow-lg hover:shadow-glow-sm transform hover:scale-[1.02] active:scale-[0.98]"
           >
-            Single Player
+            Solo Run
           </button>
 
-          {/* Multiplayer Button */}
+          {/* Online Battle Button */}
           <button
             onClick={onMultiplayer}
             className="group relative w-full py-3 px-4 bg-primary hover:bg-primary-dark text-white font-semibold text-base rounded-lg transition-all duration-200 shadow-lg hover:shadow-glow-sm transform hover:scale-[1.02] active:scale-[0.98]"
           >
-            Multiplayer
+            Online Battle
           </button>
 
           {/* About Button */}

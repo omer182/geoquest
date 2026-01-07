@@ -129,6 +129,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
 
+    case 'RESET_GAME': {
+      return {
+        ...initialState,
+        gameMode: state.gameMode, // Preserve game mode
+      };
+    }
+
     case 'SET_GAME_MODE': {
       return {
         ...state,

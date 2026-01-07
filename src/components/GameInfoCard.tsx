@@ -109,7 +109,7 @@ export default function GameInfoCard({
 
   return (
     <div
-      className={`bg-dark-elevated/90 backdrop-blur-sm rounded-xl shadow-2xl px-3 py-2 border-2 border-primary min-w-[240px] ${
+      className={`bg-gradient-to-r from-teal-600 to-blue-600 rounded-3xl shadow-2xl border-2 border-black/30 px-3 py-2 min-w-[240px] ${
         pointsNeeded === 0 ? 'cursor-pointer hover:scale-105 transition-transform duration-200' : ''
       }`}
       onClick={handleClick}

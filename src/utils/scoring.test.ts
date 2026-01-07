@@ -1,48 +1,51 @@
 import { describe, it, expect } from 'vitest';
 import { calculateScore, getLevelThreshold } from './scoring';
 
-describe('Scoring Algorithm', () => {
+describe('Scoring Algorithm (Geoguessr-style)', () => {
   describe('distance thresholds', () => {
-    it('should return 1000 points for distance < 10km', () => {
-      expect(calculateScore(0)).toBe(1000);
-      expect(calculateScore(5)).toBe(1000);
-      expect(calculateScore(9)).toBe(1000);
-      expect(calculateScore(9.9)).toBe(1000);
+    it('should return 5000 points for perfect guess (0 km)', () => {
+      expect(calculateScore(0)).toBe(5000);
     });
 
-    it('should return 750 points for distance < 50km', () => {
-      expect(calculateScore(10)).toBe(750);
-      expect(calculateScore(25)).toBe(750);
-      expect(calculateScore(49)).toBe(750);
-      expect(calculateScore(49.9)).toBe(750);
+    it('should return ~5000 points for very close guesses (< 150m)', () => {
+      expect(calculateScore(0.1)).toBeGreaterThanOrEqual(4999);
+      expect(calculateScore(0.149)).toBeGreaterThanOrEqual(4999);
     });
 
-    it('should return 500 points for distance < 100km', () => {
-      expect(calculateScore(50)).toBe(500);
-      expect(calculateScore(75)).toBe(500);
-      expect(calculateScore(99)).toBe(500);
-      expect(calculateScore(99.9)).toBe(500);
+    it('should return high scores for close guesses (< 10km)', () => {
+      expect(calculateScore(1)).toBeGreaterThan(4900);
+      expect(calculateScore(10)).toBeGreaterThan(4900);
+      expect(calculateScore(50)).toBeGreaterThan(4800);
     });
 
-    it('should return 250 points for distance < 500km', () => {
-      expect(calculateScore(100)).toBe(250);
-      expect(calculateScore(250)).toBe(250);
-      expect(calculateScore(499)).toBe(250);
-      expect(calculateScore(499.9)).toBe(250);
+    it('should return moderate scores for medium distances (100-500km)', () => {
+      expect(calculateScore(100)).toBeGreaterThan(4600);
+      expect(calculateScore(500)).toBeGreaterThan(3500);
+      expect(calculateScore(1000)).toBeGreaterThan(2500);
     });
 
-    it('should return 100 points for distance < 1000km', () => {
-      expect(calculateScore(500)).toBe(100);
-      expect(calculateScore(750)).toBe(100);
-      expect(calculateScore(999)).toBe(100);
-      expect(calculateScore(999.9)).toBe(100);
+    it('should return low scores for far distances (5000-10000km)', () => {
+      expect(calculateScore(5000)).toBeLessThan(200);
+      expect(calculateScore(10000)).toBeLessThan(10);
     });
 
-    it('should return 0 points for distance >= 1000km', () => {
-      expect(calculateScore(1000)).toBe(0);
-      expect(calculateScore(1500)).toBe(0);
-      expect(calculateScore(5000)).toBe(0);
+    it('should return 0 points for very far distances (>= 13800km)', () => {
+      expect(calculateScore(13800)).toBe(0);
+      expect(calculateScore(15000)).toBe(0);
       expect(calculateScore(20000)).toBe(0);
+    });
+
+    it('should use exponential decay (closer guesses get exponentially more points)', () => {
+      const score1 = calculateScore(100);
+      const score2 = calculateScore(200);
+      const score3 = calculateScore(400);
+      
+      // Score should decrease exponentially, not linearly
+      const ratio1 = score1 / score2;
+      const ratio2 = score2 / score3;
+      
+      // Ratios should be similar (exponential decay)
+      expect(Math.abs(ratio1 - ratio2)).toBeLessThan(0.5);
     });
   });
 
@@ -66,12 +69,12 @@ describe('Scoring Algorithm', () => {
 
 describe('Level Threshold Configuration', () => {
   describe('threshold progression', () => {
-    it('should return 1000 points for level 1', () => {
-      expect(getLevelThreshold(1)).toBe(1000);
+    it('should return 3000 points for level 1', () => {
+      expect(getLevelThreshold(1)).toBe(3000);
     });
 
-    it('should return 1500 points for level 2', () => {
-      expect(getLevelThreshold(2)).toBe(1500);
+    it('should return 3500 points for level 2', () => {
+      expect(getLevelThreshold(2)).toBe(3500);
     });
 
     it('should scale progressively for higher levels', () => {
@@ -88,10 +91,11 @@ describe('Level Threshold Configuration', () => {
     });
 
     it('should return sensible thresholds (not exceeding max possible score)', () => {
-      // Max possible score for 5 rounds is 5000 (1000 * 5)
+      // Max possible score for 5 rounds is ~25,000 (5000 * 5)
+      // Level thresholds cap at 10,000 for level 10+
       for (let level = 1; level <= 10; level++) {
         const threshold = getLevelThreshold(level);
-        expect(threshold).toBeLessThanOrEqual(5000);
+        expect(threshold).toBeLessThanOrEqual(10000);
         expect(threshold).toBeGreaterThan(0);
       }
     });

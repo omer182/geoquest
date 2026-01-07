@@ -46,13 +46,13 @@ export default function LevelAnnouncement({ level, round, onComplete }: LevelAnn
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
       <div
-        className={`bg-dark-elevated rounded-xl shadow-2xl p-8 border-2 border-primary transition-opacity duration-300 ${
+        className={`bg-gradient-to-r from-teal-600 to-blue-600 rounded-3xl shadow-2xl border-2 border-black/30 p-8 transition-opacity duration-300 ${
           isVisible ? 'opacity-100' : 'opacity-0'
         }`}
       >
         <div className="text-center space-y-3">
-          <div className="text-5xl md:text-7xl font-bold text-primary">Level {level}</div>
-          <div className="text-2xl md:text-4xl font-semibold text-gray-300">
+          <div className="text-5xl md:text-7xl font-bold text-white">Level {level}</div>
+          <div className="text-2xl md:text-4xl font-semibold text-white">
             Round {round} / 5
           </div>
         </div>
