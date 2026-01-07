@@ -133,6 +133,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
     setCurrentGuess(null);
     setShowLevelAnnouncement(true); // Show level announcement
     setShowAnimatedPrompt(false); // City animation comes after
+    setAnimationCompleted(false); // Reset animation state to prevent static prompt from flashing
   };
 
   /**
@@ -532,8 +533,8 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
     }
   }, [levelFailed, state.gameStatus]);
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col relative overflow-hidden">
+    return (
+      <div className="h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col relative overflow-hidden">
       {/* Enhanced gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-950/20 to-transparent pointer-events-none" />
 
@@ -544,19 +545,36 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
         <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '3s' }} />
       </div>
 
-      <div className="relative z-10 flex flex-col min-h-screen">
+      <div className="relative z-10 flex flex-col h-full overflow-hidden">
       {/* READY State: Initial start screen */}
-      {state.gameStatus === GameStatus.READY && (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-6 p-8">
-            <h1 className="text-5xl font-bold text-primary">GeoQuest</h1>
-            <p className="text-xl text-gray-400">Test your geography knowledge!</p>
-            <button
-              onClick={handleStartGame}
-              className="px-8 py-4 bg-primary text-dark-base rounded-lg font-semibold text-lg hover:bg-accent transition-colors"
-            >
-              Start Game
-            </button>
+      {state.gameStatus === GameStatus.READY && state.gameMode === 'single-player' && (
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="w-full max-w-[240px] space-y-3 relative z-10 animate-fade-in-up">
+            {/* Logo/Title - Exact same structure and position as MainMenu */}
+            <div className="text-center mb-4">
+              <h1 className="text-4xl sm:text-5xl font-bold mb-2 text-white tracking-tight">
+                Solo Run
+              </h1>
+              <p className="text-gray-400 text-sm sm:text-base">Beat levels to master geography!</p>
+            </div>
+
+            {/* Menu Buttons */}
+            <div className="space-y-2">
+                <button
+                  onClick={handleStartGame}
+                  className="group relative w-full py-3 px-4 bg-primary hover:bg-primary-dark text-white font-semibold text-base rounded-lg transition-all duration-200 shadow-lg hover:shadow-glow-sm transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  Start Game
+                </button>
+                {onBackToMainMenu && (
+                  <button
+                    onClick={onBackToMainMenu}
+                    className="group w-full py-2.5 px-4 bg-transparent hover:bg-dark-elevated text-gray-400 hover:text-white font-medium text-sm rounded-lg transition-all duration-200 border border-gray-700 hover:border-gray-600"
+                  >
+                    Main Menu
+                  </button>
+                )}
+            </div>
           </div>
         </div>
       )}
@@ -626,6 +644,50 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
               </div>
             )}
 
+            {/* Main Menu Button - Always visible during gameplay */}
+            {(state.gameStatus === GameStatus.GUESSING || state.gameStatus === GameStatus.ROUND_COMPLETE) && (
+              <>
+                {/* Desktop: Bottom-right button */}
+                <div className="hidden sm:block fixed bottom-4 right-4 z-[60]">
+                  <button
+                    onClick={() => {
+                      // Reset game state before going back to main menu
+                      if (state.gameMode === 'multiplayer') {
+                        dispatch({ type: 'LEAVE_ROOM' });
+                      } else {
+                        // Reset single-player game state to READY
+                        dispatch({ type: 'RESET_GAME' });
+                      }
+                      onBackToMainMenu?.();
+                    }}
+                    className="bg-gradient-to-r from-teal-600 to-blue-600 text-white font-semibold text-sm px-4 py-2.5 rounded-3xl border-2 border-black/30 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 min-h-[44px]"
+                    aria-label="Return to main menu"
+                  >
+                    Main Menu
+                  </button>
+                </div>
+                {/* Mobile: Bottom-right menu icon */}
+                <div className="sm:hidden fixed bottom-4 right-4 z-[60]">
+                  <button
+                    onClick={() => {
+                      // Reset game state before going back to main menu
+                      if (state.gameMode === 'multiplayer') {
+                        dispatch({ type: 'LEAVE_ROOM' });
+                      } else {
+                        // Reset single-player game state to READY
+                        dispatch({ type: 'RESET_GAME' });
+                      }
+                      onBackToMainMenu?.();
+                    }}
+                    className="bg-gradient-to-r from-teal-600 to-blue-600 text-white font-semibold text-xs px-3 py-2 rounded-3xl border-2 border-black/30 shadow-lg min-h-[36px] flex items-center justify-center"
+                    aria-label="Return to main menu"
+                  >
+                    Menu
+                  </button>
+                </div>
+              </>
+            )}
+
             {/* Multiplayer Timer - Only show during GUESSING state */}
             {state.gameMode === 'multiplayer' &&
               state.gameStatus === GameStatus.GUESSING &&
@@ -662,7 +724,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                   }}
                 />
               ) : animationCompleted ? (
-                <div className="absolute top-4 left-4 sm:left-auto sm:right-4 z-20">
+                <div className="absolute top-16 left-4 sm:left-auto sm:right-4 z-20">
                   <CityPrompt cityName={currentCity.name} country={currentCity.country} />
                 </div>
               ) : null
@@ -673,16 +735,12 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
               state.gameStatus === GameStatus.ROUND_COMPLETE &&
               currentCity &&
               state.currentDistance !== null && (
-                <div className="absolute inset-x-0 bottom-6 flex justify-center pointer-events-none">
-                  <div className="pointer-events-auto">
-                    <RoundResults
-                      distance={state.currentDistance}
-                      score={state.roundScores[state.roundScores.length - 1] || 0}
-                      cityName={currentCity.name}
-                      onContinue={handleContinue}
-                    />
-                  </div>
-                </div>
+                <RoundResults
+                  distance={state.currentDistance}
+                  score={state.roundScores[state.roundScores.length - 1] || 0}
+                  cityName={currentCity.name}
+                  onContinue={handleContinue}
+                />
               )}
 
             {/* Multiplayer Round Results (ROUND_COMPLETE only) */}

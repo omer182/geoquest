@@ -1,3 +1,4 @@
+
 interface MultiplayerSubmenuProps {
   onCreateRoom: () => void;
   onJoinRoom: () => void;
@@ -13,7 +14,7 @@ export default function MultiplayerSubmenu({
   onBack,
 }: MultiplayerSubmenuProps) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white p-4 relative overflow-hidden">
+    <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white p-4 relative overflow-hidden">
       {/* Enhanced gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-950/20 to-transparent pointer-events-none" />
 
@@ -28,7 +29,7 @@ export default function MultiplayerSubmenu({
         {/* Header */}
         <div className="text-center mb-4">
           <h2 className="text-3xl sm:text-4xl font-bold mb-2 text-white tracking-tight">
-            Multiplayer
+            Online Battle
           </h2>
           <p className="text-gray-400 text-sm sm:text-base">Challenge your friends online</p>
         </div>

@@ -1,12 +1,11 @@
 /**
  * Calculates the score based on distance, city difficulty, and difficulty level.
  *
- * Formula:
- * - Base Score: Uses exponential decay based on distance
+ * Formula (Geoguessr-style exponential decay):
+ * - Base Score: score = 5000 * e^(-10 * distance / size)
  *   - Perfect guess (0 km): 5000 points
- *   - 100 km away: ~2500 points
- *   - 500 km away: ~833 points
- *   - 1000+ km away: ~455 points
+ *   - World map size (diagonal): 14,916.862 km
+ *   - 5k score requires being within ~149 meters (1/100,000th of map size)
  *
  * - City Difficulty Multiplier (tier):
  *   - Tier 1 (famous cities like New York, Paris): x1.0
@@ -25,10 +24,28 @@
  * @returns {number} Final score with all multipliers applied
  */
 export function calculateScore(distanceKm, cityTier = 1, level = 1) {
-  // Base score: exponential decay based on distance
-  // Formula: 5000 / (1 + distance / 100)
-  // This rewards accuracy - closer guesses get exponentially more points
-  const baseScore = 5000 / (1 + distanceKm / 100);
+  // Return 0 for distances above 1500km
+  if (distanceKm > 1500) {
+    return 0;
+  }
+
+  // World map diagonal size (distance between opposite corners)
+  // This is the "size" parameter in Geoguessr's formula
+  const WORLD_MAP_SIZE_KM = 14916.862;
+
+  // Base score: Geoguessr-style exponential decay with adjusted coefficient
+  // Formula: 1500 * e^(-22 * distance / size)
+  // Max score per round is 1500 points (100%)
+  // Using -22 for steeper decay (more balanced scoring - prevents finishing level in 1 guess)
+  // This provides exponential decay - very close guesses get near-maximum points,
+  // while distant guesses get exponentially fewer points
+  let baseScore = 1500 * Math.exp(-22 * distanceKm / WORLD_MAP_SIZE_KM);
+  
+  // Minimum score floor: ensures very far distances still get reasonable points
+  // Formula: max(1, 30 - distance/50) gives ~8 points at 1100km
+  // This prevents scores from being too low at extreme distances
+  const minScore = Math.max(1, 30 - Math.floor(distanceKm / 50));
+  baseScore = Math.max(baseScore, minScore);
 
   // City difficulty multiplier
   // Tier 1 (famous): x1.0, Tier 2 (moderate): x1.5, Tier 3 (obscure): x2.0
@@ -38,8 +55,11 @@ export function calculateScore(distanceKm, cityTier = 1, level = 1) {
   // Level 1: x1.0, Level 5: x1.8, Level 10: x2.8
   const levelMultiplier = 1.0 + (level - 1) * 0.2;
 
-  // Calculate final score with both multipliers
-  const finalScore = Math.round(baseScore * cityMultiplier * levelMultiplier);
+  // Calculate final score with both multipliers, then cap at 1500
+  let finalScore = Math.round(baseScore * cityMultiplier * levelMultiplier);
+  
+  // Cap at 1500 points max per round
+  finalScore = Math.min(finalScore, 1500);
 
   return finalScore;
 }

@@ -59,7 +59,7 @@ export default function MultiplayerTimer({
 
   return (
     <div className="absolute top-4 left-4 sm:left-1/2 sm:-translate-x-1/2 z-50 animate-fade-in">
-      <div className="bg-dark-elevated/90 backdrop-blur-sm border border-primary/30 rounded-lg px-3 sm:px-4 py-2.5 shadow-lg">
+      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-3xl border-2 border-black/30 px-3 sm:px-4 py-2.5 shadow-lg">
         <div
           className={`text-lg sm:text-xl md:text-2xl font-bold font-mono ${colorClass} transition-colors duration-300`}
         >

@@ -103,7 +103,7 @@ export default function MultiplayerRoundResults({
   return (
     <div className="absolute inset-x-4 bottom-4 z-40 flex flex-col items-center justify-end pointer-events-none gap-3">
       {/* Results Card */}
-      <div className="bg-dark-elevated/95 backdrop-blur-sm rounded-lg shadow-2xl p-2 sm:p-3 animate-slide-up border border-primary/30 w-full max-w-[280px] sm:max-w-sm pointer-events-auto">
+      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-3xl shadow-2xl border-2 border-black/30 p-2 sm:p-3 animate-slide-up w-full max-w-[280px] sm:max-w-sm pointer-events-auto">
         {/* Header */}
         <div className="text-center mb-2">
           <h3 className="text-sm sm:text-base font-bold text-white">

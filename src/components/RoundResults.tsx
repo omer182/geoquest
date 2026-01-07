@@ -35,7 +35,10 @@ function formatNumber(num: number): string {
  *
  * Displays the results after a round is completed in a clean, centered modal:
  * - Distance message: "You were [X]km off!"
- * - Points awarded in green: "+[X] points"
+ * - Points awarded with color coding:
+ *   - Red: 0 to 1/3 max points (0-500)
+ *   - Yellow: 1/3 to 2/3 max points (501-1000)
+ *   - Green: 2/3 to max points (1001-1500)
  * - Next Turn button
  *
  * @example
@@ -49,9 +52,30 @@ function formatNumber(num: number): string {
  * ```
  */
 export default function RoundResults({ distance, score, onContinue }: RoundResultsProps) {
+  const MAX_POINTS = 1500;
+  const THIRD_MAX = MAX_POINTS / 3; // ~500
+  const TWO_THIRDS_MAX = (MAX_POINTS * 2) / 3; // ~1000
+
+  // Determine color based on score percentage
+  let scoreColor: string;
+  if (score === 0) {
+    scoreColor = 'text-red-500'; // Red for 0 points
+  } else if (score <= THIRD_MAX) {
+    scoreColor = 'text-red-500'; // Red: 0 to 1/3 max
+  } else if (score <= TWO_THIRDS_MAX) {
+    scoreColor = 'text-yellow-500'; // Yellow: 1/3 to 2/3 max
+  } else {
+    scoreColor = 'text-green-500'; // Green: 2/3 to max
+  }
+
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 animate-slide-up">
-      <div className="bg-dark-elevated/95 backdrop-blur-sm rounded-xl shadow-2xl px-4 py-3 border-2 border-primary min-w-[320px]">
+    <div 
+      className="fixed bottom-4 left-0 right-0 z-40 flex justify-center px-4"
+      style={{
+        animation: 'slide-up-centered 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+      }}
+    >
+      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-3xl shadow-2xl border-2 border-black/30 px-4 py-3 inline-block">
         <div className="text-center">
           {/* Distance message */}
           <h2 className="text-lg font-bold text-white mb-2">
@@ -59,17 +83,19 @@ export default function RoundResults({ distance, score, onContinue }: RoundResul
           </h2>
 
           {/* Points */}
-          <div className="text-3xl font-bold text-green-400 mb-3">
-            +{formatNumber(score)} points
+          <div className={`text-3xl font-bold ${scoreColor} mb-3`}>
+            {score > 0 ? '+' : ''}{formatNumber(score)} points
           </div>
 
           {/* Next Round button */}
-          <button
-            onClick={onContinue}
-            className="w-full bg-primary hover:bg-primary-dark text-dark-base font-semibold text-base px-6 py-2.5 rounded-lg transition-colors duration-200"
-          >
-            Next Round
-          </button>
+          <div className="flex justify-center">
+            <button
+              onClick={onContinue}
+              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-semibold text-base px-6 py-2.5 rounded-lg transition-colors duration-200 min-h-[44px] border border-white/30"
+            >
+              Next Round
+            </button>
+          </div>
         </div>
       </div>
     </div>

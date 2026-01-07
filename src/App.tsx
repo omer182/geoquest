@@ -9,6 +9,7 @@ import RoomLobby from './components/RoomLobby';
 import { WebSocketProvider } from './context/WebSocketContext';
 import { GameProvider, useGame } from './context/GameContext';
 import { ConnectionStatus } from './components/ConnectionStatus';
+import globeImage from './assets/images/globe.png';
 
 type AppScreen =
   | 'main-menu'
@@ -117,7 +118,7 @@ function AppContent() {
 
     case 'about':
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white p-4 relative overflow-hidden">
+        <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white p-4 relative overflow-hidden">
           {/* Enhanced gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-950/20 to-transparent pointer-events-none" />
 
@@ -127,22 +128,32 @@ function AppContent() {
             <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }} />
           </div>
 
-          <div className="max-w-2xl space-y-6 relative z-10 animate-fade-in-up">
-            <h1 className="text-5xl font-bold text-white mb-4 tracking-tight">About GeoQuest</h1>
-            <p className="text-gray-300 text-lg">
-              GeoQuest is a geography quiz game where you test your knowledge of world cities by
-              guessing their locations on a map.
-            </p>
-            <p className="text-gray-300">
-              Built with React, TypeScript, Leaflet, and Socket.IO for real-time multiplayer
-              gameplay.
-            </p>
-            <button
-              onClick={handleBackToMainMenu}
-              className="mt-8 w-full py-4 px-6 bg-transparent hover:bg-dark-elevated text-gray-400 hover:text-white font-medium text-base rounded-xl transition-all duration-200 border border-gray-700 hover:border-gray-600"
-            >
-              Back to Main Menu
-            </button>
+          <div className="w-full max-w-[240px] space-y-6 relative z-10 animate-fade-in-up">
+            <h1 className="text-4xl sm:text-5xl font-bold text-white mb-2 tracking-tight text-center">
+              About GeoQuest
+            </h1>
+            <div className="space-y-4 text-center">
+              <p className="text-gray-300 text-sm sm:text-base">
+                GeoQuest is a geography quiz game where you test your knowledge of world cities by
+                guessing their locations on a map.
+              </p>
+              <p className="text-gray-300 text-sm sm:text-base">
+                Built with React, TypeScript, Leaflet, and Socket.IO for real-time multiplayer
+                gameplay.
+              </p>
+              <p className="text-gray-400 text-xs italic mt-4">
+                This entire project was built using spec-driven development with agent-os. Not a
+                single line of code was written or even looked at by a human - fully vibe coding.
+              </p>
+            </div>
+            <div className="space-y-2 mt-6">
+              <button
+                onClick={handleBackToMainMenu}
+                className="group w-full py-2.5 px-4 bg-transparent hover:bg-dark-elevated text-gray-400 hover:text-white font-medium text-sm rounded-lg transition-all duration-200 border border-gray-700 hover:border-gray-600"
+              >
+                Main Menu
+              </button>
+            </div>
           </div>
         </div>
       );
@@ -165,6 +176,14 @@ function App() {
     <WebSocketProvider>
       <GameProvider>
         <Toaster position="top-center" richColors />
+        {/* Globe image - positioned on bottom-left, partially off-screen - persists across all screens */}
+        <div className="fixed left-0 bottom-0 -translate-x-1/3 translate-y-[43%] pointer-events-none z-[5]">
+          <img 
+            src={globeImage} 
+            alt="Globe" 
+            className="w-[1152px] h-[1152px] object-contain"
+          />
+        </div>
         <AppContent />
       </GameProvider>
     </WebSocketProvider>

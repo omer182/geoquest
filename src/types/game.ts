@@ -215,6 +215,13 @@ export interface RestartGameAction {
 }
 
 /**
+ * Action to reset the game state to initial READY state.
+ */
+export interface ResetGameAction {
+  type: 'RESET_GAME';
+}
+
+/**
  * Action to set the game mode (single-player or multiplayer).
  */
 export interface SetGameModeAction {
@@ -386,6 +393,7 @@ export type GameAction =
   | AdvanceLevelAction
   | RetryLevelAction
   | RestartGameAction
+  | ResetGameAction
   | SetGameModeAction
   | JoinRoomAction
   | UpdateRoomAction

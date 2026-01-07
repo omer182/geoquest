@@ -112,13 +112,13 @@ interface GeoJSONFeatureCollection {
   features: GeoJSON.Feature[];
 }
 
-// Vibrant color palette for Four Color Theorem
-// Bright, distinct colors for clear country differentiation
+// Pastel color palette for Four Color Theorem
+// Soft, muted colors for a gentle, elegant map appearance
 const FOUR_COLORS = [
-  '#FFB6C1', // Light pink - vibrant and distinct
-  '#87CEEB', // Sky blue - bright and clear
-  '#98D8C8', // Mint green - fresh and vibrant
-  '#F0E68C', // Khaki yellow - warm and bright
+  '#FFD1DC', // Soft pink - gentle and warm
+  '#B3D9FF', // Soft blue - calm and serene
+  '#C7E9C0', // Soft mint - fresh and soothing
+  '#FFF9C4', // Soft cream - warm and light
 ];
 
 /**
