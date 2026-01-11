@@ -23,14 +23,9 @@ interface LevelCompleteProps {
   onNextLevel: () => void;
 
   /**
-   * Callback function triggered when Retry Level button is clicked
+   * Callback function triggered when Main Menu button is clicked
    */
-  onRetryLevel: () => void;
-
-  /**
-   * Callback function triggered when Restart Game button is clicked
-   */
-  onRestartGame: () => void;
+  onMainMenu?: () => void;
 }
 
 /**
@@ -68,8 +63,7 @@ export default function LevelComplete({
   threshold,
   passed,
   onNextLevel,
-  onRetryLevel,
-  onRestartGame,
+  onMainMenu,
 }: LevelCompleteProps) {
   // Calculate progress percentage (capped at 100%)
   const progressPercentage = Math.min((totalScore / threshold) * 100, 100);
@@ -151,21 +145,15 @@ export default function LevelComplete({
             </button>
           )}
 
-          {/* Retry Level Button */}
-          <button
-            onClick={onRetryLevel}
-            className="w-full bg-gradient-to-r from-teal-600 to-blue-600 text-white font-bold py-2.5 sm:py-3 lg:py-4 rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 min-h-[44px] text-sm sm:text-base lg:text-lg"
-          >
-            Retry Level
-          </button>
-
-          {/* Restart Game Button */}
-          <button
-            onClick={onRestartGame}
-            className="w-full bg-gray-200 text-gray-700 font-bold py-2.5 sm:py-3 lg:py-4 rounded-lg sm:rounded-xl hover:bg-gray-300 transition-all duration-200 min-h-[44px] text-sm sm:text-base lg:text-lg"
-          >
-            Restart Game
-          </button>
+          {/* Main Menu Button */}
+          {onMainMenu && (
+            <button
+              onClick={onMainMenu}
+              className="w-full bg-gray-200 text-gray-700 font-bold py-2.5 sm:py-3 lg:py-4 rounded-lg sm:rounded-xl hover:bg-gray-300 transition-all duration-200 min-h-[44px] text-sm sm:text-base lg:text-lg"
+            >
+              Main Menu
+            </button>
+          )}
         </div>
       </div>
     </div>

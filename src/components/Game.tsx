@@ -151,41 +151,12 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
     // Reset map
     setMapKey(prev => prev + 1);
     setCurrentGuess(null);
-    // Hide level announcement when advancing level
-    setShowLevelAnnouncement(false);
+    // Show level announcement when advancing to next level
+    setShowLevelAnnouncement(true);
+    setShowAnimatedPrompt(false); // City animation comes after
+    setAnimationCompleted(false); // Reset animation state
   };
 
-  /**
-   * Handle retrying current level after failure.
-   */
-  const handleRetryLevel = () => {
-    const cities = selectCitiesForLevel(state.currentLevel);
-
-    dispatch({
-      type: 'RETRY_LEVEL',
-      payload: { cities },
-    });
-
-    // Reset map
-    setMapKey(prev => prev + 1);
-    setCurrentGuess(null);
-  };
-
-  /**
-   * Handle restarting game from level 1.
-   */
-  const handleRestartGame = () => {
-    const cities = selectCitiesForLevel(1);
-
-    dispatch({
-      type: 'RESTART_GAME',
-      payload: { cities },
-    });
-
-    // Reset map
-    setMapKey(prev => prev + 1);
-    setCurrentGuess(null);
-  };
 
   /**
    * Handle starting the game from READY state.
@@ -748,21 +719,17 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
               state.gameStatus === GameStatus.ROUND_COMPLETE &&
               state.multiplayerGameState?.roundResults &&
               currentCity && (
-                <div className="absolute inset-x-0 bottom-6 flex justify-center pointer-events-none">
-                  <div className="pointer-events-auto">
-                    <MultiplayerRoundResults
-                      roundNumber={state.multiplayerGameState.currentRound}
-                      totalRounds={state.multiplayerGameState.totalRounds}
-                      results={state.multiplayerGameState.roundResults}
-                      currentPlayerId={state.currentPlayer?.id || ''}
-                      targetCityName={currentCity.name}
-                      countdown={state.multiplayerGameState.autoAdvanceCountdown}
-                      roundScore={state.multiplayerGameState.roundResults.find(r => r.playerId === state.currentPlayer?.id)?.score || 0}
-                      totalScore={state.multiplayerGameState.standings.find(s => s.playerId === state.currentPlayer?.id)?.totalScore || 0}
-                      roomCode={state.currentRoom?.code || ''}
-                    />
-                  </div>
-                </div>
+                <MultiplayerRoundResults
+                  roundNumber={state.multiplayerGameState.currentRound}
+                  totalRounds={state.multiplayerGameState.totalRounds}
+                  results={state.multiplayerGameState.roundResults}
+                  currentPlayerId={state.currentPlayer?.id || ''}
+                  targetCityName={currentCity.name}
+                  countdown={state.multiplayerGameState.autoAdvanceCountdown}
+                  roundScore={state.multiplayerGameState.roundResults.find(r => r.playerId === state.currentPlayer?.id)?.score || 0}
+                  totalScore={state.multiplayerGameState.standings.find(s => s.playerId === state.currentPlayer?.id)?.totalScore || 0}
+                  roomCode={state.currentRoom?.code || ''}
+                />
               )}
 
             {/* Confirm Button - Show during GUESSING state when pin is placed, or show waiting state after submit */}
@@ -792,8 +759,11 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
             threshold={getLevelThreshold(state.currentLevel)}
             passed={levelPassed}
             onNextLevel={handleAdvanceLevel}
-            onRetryLevel={handleRetryLevel}
-            onRestartGame={handleRestartGame}
+            onMainMenu={() => {
+              // Reset single-player game state to READY
+              dispatch({ type: 'RESET_GAME' });
+              onBackToMainMenu?.();
+            }}
           />
         </div>
       )}

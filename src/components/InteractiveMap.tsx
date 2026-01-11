@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { MapContainer, Marker, GeoJSON, useMapEvents, Polyline, useMap, Tooltip, TileLayer } from 'react-leaflet';
+import { MapContainer, Marker, GeoJSON, useMapEvents, Polyline, useMap, Tooltip } from 'react-leaflet';
 import type { LatLngExpression, LeafletMouseEvent } from 'leaflet';
 import L from 'leaflet';
 import pinIconUrl from '@/assets/icons/pin.svg';
@@ -115,8 +115,8 @@ interface GeoJSONFeatureCollection {
 // Pastel color palette for Four Color Theorem
 // Soft, muted colors for a gentle, elegant map appearance
 const FOUR_COLORS = [
-  '#FFD1DC', // Soft pink - gentle and warm
-  '#B3D9FF', // Soft blue - calm and serene
+  '#FFD4B3', // Soft peach - warm and inviting
+  '#E8C5D8', // Soft pinkish-lavender - gentle and elegant
   '#C7E9C0', // Soft mint - fresh and soothing
   '#FFF9C4', // Soft cream - warm and light
 ];
@@ -778,8 +778,8 @@ export default function InteractiveMap({
       maxZoom={10}
       maxBounds={maxBounds}
       maxBoundsViscosity={1.0}
-      className={`${className} bg-[#4A90E2]`}
-      style={{ backgroundColor: '#4A90E2' }}
+      className={`${className} bg-[#7BB5E8]`}
+      style={{ backgroundColor: '#7BB5E8' }}
       zoomControl={false}
       preferCanvas={true}
       zoomAnimation={true}
@@ -792,16 +792,6 @@ export default function InteractiveMap({
     >
       {/* Initialize custom panes for proper z-index layering */}
       <MapPaneInitializer />
-
-      {/* Realistic map tiles - Using CartoDB Positron (no labels) for clean look */}
-      {/* Alternative: Use Stamen Toner Lite or CartoDB Positron No Labels */}
-      <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        maxZoom={19}
-        tileSize={256}
-        zoomOffset={0}
-      />
 
       {/* Country boundaries with 4-color method - render in countriesPane so fill is visible */}
       {countriesData && (

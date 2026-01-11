@@ -101,9 +101,9 @@ export default function MultiplayerRoundResults({
   const isFinalRound = roundNumber === totalRounds;
 
   return (
-    <div className="absolute inset-x-4 bottom-4 z-40 flex flex-col items-center justify-end pointer-events-none gap-3">
+    <div className="fixed inset-x-0 bottom-0 z-40 flex flex-col items-center justify-end pointer-events-none gap-3 px-4 pb-4 sm:pb-6" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
       {/* Results Card */}
-      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-3xl shadow-2xl border-2 border-black/30 p-2 sm:p-3 animate-slide-up w-full max-w-[280px] sm:max-w-sm pointer-events-auto">
+      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-3xl shadow-2xl border-2 border-black/30 p-2 sm:p-3 animate-slide-up w-full max-w-[calc(100vw-2rem)] sm:max-w-sm pointer-events-auto">
         {/* Header */}
         <div className="text-center mb-2">
           <h3 className="text-sm sm:text-base font-bold text-white">
@@ -208,7 +208,7 @@ export default function MultiplayerRoundResults({
             hasClickedContinue
               ? 'bg-gray-600 cursor-wait'
               : 'bg-gradient-to-r from-teal-600 to-blue-600 hover:shadow-xl transform hover:scale-105'
-          } text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-200 min-h-[44px] text-base sm:text-lg animate-slide-up pointer-events-auto`}
+          } text-white font-bold py-3 px-6 sm:px-8 rounded-full border-2 border-black/30 shadow-lg transition-all duration-200 min-h-[44px] text-sm sm:text-lg animate-slide-up pointer-events-auto w-full max-w-[calc(100vw-2rem)] sm:max-w-sm`}
           aria-label="Continue to next round"
         >
           {hasClickedContinue
