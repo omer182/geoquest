@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { MapContainer, Marker, GeoJSON, useMapEvents, Polyline, useMap, Tooltip } from 'react-leaflet';
+import { MapContainer, Marker, GeoJSON, useMapEvents, Polyline, useMap, Tooltip, TileLayer } from 'react-leaflet';
 import type { LatLngExpression, LeafletMouseEvent } from 'leaflet';
 import L from 'leaflet';
 import pinIconUrl from '@/assets/icons/pin.svg';
@@ -793,6 +793,14 @@ export default function InteractiveMap({
       {/* Initialize custom panes for proper z-index layering */}
       <MapPaneInitializer />
 
+      {/* Base map tiles with low opacity to show real geography (islands, coastlines, etc.) */}
+      <TileLayer
+        url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        opacity={0.85}
+        className="map-tiles"
+      />
+
       {/* Country boundaries with 4-color method - render in countriesPane so fill is visible */}
       {countriesData && (
         <GeoJSON
@@ -934,7 +942,6 @@ export default function InteractiveMap({
           </Tooltip>
         </Marker>
       ))}
-
 
       {/* Target location marker (shown after guess confirmation) - RED color - renders above line */}
       {targetLocation && (

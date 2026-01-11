@@ -69,7 +69,7 @@ export default function LevelComplete({
   const progressPercentage = Math.min((totalScore / threshold) * 100, 100);
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center z-50 p-2 sm:p-4 relative overflow-hidden">
+    <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center z-50 relative overflow-hidden">
       {/* Enhanced gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-950/20 to-transparent pointer-events-none" />
 
