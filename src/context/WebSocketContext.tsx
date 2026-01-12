@@ -284,15 +284,32 @@ export function WebSocketProvider({ children }: WebSocketProviderProps): JSX.Ele
       payload: { socket },
     });
 
+    // Track previous socket ID for reconnection
+    let previousSocketId: string | null = null;
+
     // Connection successful
     socket.on(SOCKET_EVENTS.CONNECT, () => {
-      log('WebSocket connected', { socketId: socket.id });
+      log('WebSocket connected', { socketId: socket.id, previousSocketId });
 
       // Clear any reconnection timeouts
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
       }
+
+      // Store previous socket ID for potential reconnection
+      if (previousSocketId && previousSocketId !== socket.id) {
+        log('Socket ID changed, this is a reconnection', {
+          oldId: previousSocketId,
+          newId: socket.id
+        });
+
+        // Store the socket ID mapping for room rejoin
+        sessionStorage.setItem('previous_socket_id', previousSocketId);
+      }
+
+      // Store current socket ID for future reconnections
+      previousSocketId = socket.id;
 
       dispatch({
         type: 'CONNECT_SUCCESS',

@@ -27,6 +27,48 @@ export default function RoomLobby({ onGameStart, onLeave }: RoomLobbyProps) {
   const currentPlayer = gameState.currentPlayer;
   const isHost = currentPlayer?.isHost || false;
 
+  // Handle automatic room rejoin on reconnection
+  useEffect(() => {
+    if (!socket || !currentRoom || !currentPlayer) return;
+
+    // Check if we just reconnected (socket is connected but we have a previous socket ID stored)
+    const previousSocketId = sessionStorage.getItem('previous_socket_id');
+
+    if (previousSocketId && socketState.connectionStatus === 'connected') {
+      console.log('[RoomLobby] Detected reconnection, attempting to rejoin room', {
+        roomCode: currentRoom.code,
+        previousSocketId,
+        newSocketId: socket.id
+      });
+
+      // Rejoin the room with previous socket ID for session restoration
+      socket.emit(
+        SOCKET_EVENTS.JOIN_ROOM,
+        {
+          roomCode: currentRoom.code,
+          playerName: currentPlayer.name,
+          previousSocketId: previousSocketId,
+        },
+        (response: any) => {
+          if (response.success) {
+            console.log('[RoomLobby] Successfully rejoined room after reconnection', response.data);
+
+            // Update local state with rejoined room
+            dispatch({
+              type: 'UPDATE_ROOM',
+              payload: { room: response.data.room },
+            });
+
+            // Clear the previous socket ID since we've successfully rejoined
+            sessionStorage.removeItem('previous_socket_id');
+          } else {
+            console.error('[RoomLobby] Failed to rejoin room:', response.error);
+          }
+        }
+      );
+    }
+  }, [socketState.connectionStatus, socket, currentRoom, currentPlayer, dispatch]);
+
   // Listen for room updates
   useSocketEvent<{ room: Room }>(SOCKET_EVENTS.ROOM_UPDATED, (data) => {
     dispatch({

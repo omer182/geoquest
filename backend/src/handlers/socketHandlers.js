@@ -99,27 +99,70 @@ export function registerSocketHandlers(socket, io) {
         };
       }
 
-      const { room, player } = roomManager.joinRoom(
-        request.roomCode,
-        request.playerName,
-        socket.id
-      );
+      let room, player;
+      let isReconnection = false;
+
+      // Check if this is a reconnection attempt (has previousSocketId)
+      if (request.previousSocketId) {
+        console.log(
+          `[Socket] Attempting to restore session for ${request.previousSocketId} -> ${socket.id}`
+        );
+
+        const restored = roomManager.restoreSession(
+          request.previousSocketId,
+          socket.id,
+          request.roomCode
+        );
+
+        if (restored) {
+          room = restored.room;
+          player = restored.player;
+          isReconnection = true;
+
+          console.log(
+            `[Socket] Session restored for ${socket.id} (${player.name}) in room ${room.code}`
+          );
+        }
+      }
+
+      // If not a reconnection or restoration failed, join normally
+      if (!isReconnection) {
+        const joinResult = roomManager.joinRoom(
+          request.roomCode,
+          request.playerName,
+          socket.id
+        );
+        room = joinResult.room;
+        player = joinResult.player;
+
+        console.log(
+          `[Socket] Player ${socket.id} (${player.name}) joined room ${room.code}`
+        );
+      }
 
       // Join Socket.IO room
       socket.join(room.code);
 
-      console.log(
-        `[Socket] Player ${socket.id} (${player.name}) joined room ${room.code}`
-      );
+      if (isReconnection) {
+        // Notify about reconnection
+        socket.to(room.code).emit('player:reconnected', {
+          playerId: socket.id,
+          playerName: player.name,
+        });
 
-      // Notify existing players
-      socket.to(room.code).emit(SOCKET_EVENTS.PLAYER_JOINED, {
-        player,
-        room,
-      });
+        console.log(
+          `[Socket] Player ${socket.id} (${player.name}) reconnected to room ${room.code}`
+        );
+      } else {
+        // Notify about new player joining
+        socket.to(room.code).emit(SOCKET_EVENTS.PLAYER_JOINED, {
+          player,
+          room,
+        });
+      }
 
       // Send response to joiner
-      const response = { room, player };
+      const response = { room, player, reconnected: isReconnection };
       if (callback) {
         callback({ success: true, data: response });
       } else {
