@@ -157,6 +157,25 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
     setAnimationCompleted(false); // Reset animation state
   };
 
+  /**
+   * Handle restarting the current level after failing.
+   */
+  const handleRestartLevel = () => {
+    const cities = selectCitiesForLevel(state.currentLevel);
+
+    dispatch({
+      type: 'RETRY_LEVEL',
+      payload: { cities },
+    });
+
+    // Reset map
+    setMapKey(prev => prev + 1);
+    setCurrentGuess(null);
+    // Show level announcement when restarting level
+    setShowLevelAnnouncement(true);
+    setShowAnimatedPrompt(false);
+    setAnimationCompleted(false);
+  };
 
   /**
    * Handle starting the game from READY state.
@@ -759,6 +778,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
             threshold={getLevelThreshold(state.currentLevel)}
             passed={levelPassed}
             onNextLevel={handleAdvanceLevel}
+            onRetryLevel={handleRestartLevel}
             onMainMenu={() => {
               // Reset single-player game state to READY
               dispatch({ type: 'RESET_GAME' });

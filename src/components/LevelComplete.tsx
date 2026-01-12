@@ -23,6 +23,11 @@ interface LevelCompleteProps {
   onNextLevel: () => void;
 
   /**
+   * Callback function triggered when Retry Level button is clicked
+   */
+  onRetryLevel?: () => void;
+
+  /**
    * Callback function triggered when Main Menu button is clicked
    */
   onMainMenu?: () => void;
@@ -63,6 +68,7 @@ export default function LevelComplete({
   threshold,
   passed,
   onNextLevel,
+  onRetryLevel,
   onMainMenu,
 }: LevelCompleteProps) {
   // Calculate progress percentage (capped at 100%)
@@ -142,6 +148,16 @@ export default function LevelComplete({
               className="w-full bg-gradient-to-r from-green-600 to-teal-600 text-white font-bold py-2.5 sm:py-3 lg:py-4 rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 min-h-[44px] text-sm sm:text-base lg:text-lg"
             >
               Next Level
+            </button>
+          )}
+
+          {/* Retry Level Button (only shown if failed) */}
+          {!passed && onRetryLevel && (
+            <button
+              onClick={onRetryLevel}
+              className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white font-bold py-2.5 sm:py-3 lg:py-4 rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 min-h-[44px] text-sm sm:text-base lg:text-lg"
+            >
+              Retry Level
             </button>
           )}
 
