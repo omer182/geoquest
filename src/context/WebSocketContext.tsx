@@ -396,9 +396,41 @@ export function WebSocketProvider({ children }: WebSocketProviderProps): JSX.Ele
       }
     });
 
+    // Handle mobile app backgrounding/foregrounding
+    // When the app goes to background on mobile, the connection may be suspended
+    // When it comes back, we need to check if we're still connected and reconnect if needed
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        log('App became visible, checking connection status');
+
+        // If socket exists but is disconnected, try to reconnect
+        if (socketRef.current && !socketRef.current.connected) {
+          log('Socket disconnected while app was in background, reconnecting...');
+
+          // Clear any pending reconnection attempts
+          if (reconnectTimeoutRef.current) {
+            clearTimeout(reconnectTimeoutRef.current);
+            reconnectTimeoutRef.current = null;
+          }
+
+          // Reset reconnect attempts and try to connect
+          dispatch({ type: 'RESET_RECONNECT_ATTEMPTS' });
+          socketRef.current.connect();
+        }
+      } else {
+        log('App became hidden (backgrounded)');
+      }
+    };
+
+    // Add visibility change listener for mobile background handling
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     // Cleanup on unmount
     return () => {
       log('Cleaning up WebSocket connection');
+
+      // Remove visibility change listener
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
 
       // Clear reconnection timeout
       if (reconnectTimeoutRef.current) {

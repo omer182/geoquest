@@ -208,11 +208,11 @@ export default function MultiplayerRoundResults({
             hasClickedContinue
               ? 'bg-gray-600 cursor-wait'
               : 'bg-gradient-to-r from-teal-600 to-blue-600 hover:shadow-xl transform hover:scale-105'
-          } text-white font-bold py-3 px-6 sm:px-8 rounded-full border-2 border-black/30 shadow-lg transition-all duration-200 min-h-[44px] text-sm sm:text-lg animate-slide-up pointer-events-auto w-full max-w-[calc(100vw-2rem)] sm:max-w-sm`}
+          } text-white font-bold py-2.5 px-4 sm:py-3 sm:px-8 rounded-full border-2 border-black/30 shadow-lg transition-all duration-200 min-h-[44px] text-xs sm:text-lg animate-slide-up pointer-events-auto w-auto max-w-[280px] sm:max-w-sm mx-auto`}
           aria-label="Continue to next round"
         >
           {hasClickedContinue
-            ? `Waiting for other players... (${countdown})`
+            ? `Waiting... (${countdown})`
             : `Continue (${countdown})`}
         </button>
       )}
