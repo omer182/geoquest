@@ -62,7 +62,7 @@ describe('GameSessionManager', () => {
       const result = session.addGuess('player1', { lat: 40.7130, lng: -74.0060 }, Date.now());
 
       expect(result.distance).toBeLessThan(1);
-      expect(result.score).toBe(1000); // Perfect score for < 10km
+      expect(result.score).toBe(1500); // Max (capped) score per round
       expect(result.isRoundComplete).toBe(false); // Only 1 of 2 players submitted
     });
 
@@ -92,7 +92,9 @@ describe('GameSessionManager', () => {
 
       const player2Result = results.find(r => r.playerId === 'player2');
       expect(player2Result.score).toBe(0);
-      expect(player2Result.guess).toEqual({ lat: 0, lng: 0 });
+      // No pin placed: guess and distance are null rather than a fake {0,0} pin
+      expect(player2Result.guess).toBeNull();
+      expect(player2Result.distance).toBeNull();
     });
   });
 

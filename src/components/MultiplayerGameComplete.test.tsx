@@ -71,7 +71,7 @@ describe('MultiplayerGameComplete - 5 Player Support', () => {
         currentPlayerId="p3"
         rematchRequests={new Set()}
         allPlayers={allPlayers}
-        onPlayAgain={vi.fn()}
+        onRematch={vi.fn()}
         onLeaveRoom={vi.fn()}
         hasRequestedRematch={false}
         rematchCountdown={null}
@@ -99,19 +99,17 @@ describe('MultiplayerGameComplete - 5 Player Support', () => {
         currentPlayerId="p1"
         rematchRequests={new Set()}
         allPlayers={allPlayers}
-        onPlayAgain={vi.fn()}
+        onRematch={vi.fn()}
         onLeaveRoom={vi.fn()}
         hasRequestedRematch={false}
         rematchCountdown={null}
       />
     );
 
-    // Check all 5 players are displayed in standings
-    expect(screen.getByText('Alice')).toBeInTheDocument();
-    expect(screen.getByText('Bob')).toBeInTheDocument();
-    expect(screen.getByText('Charlie')).toBeInTheDocument();
-    expect(screen.getByText('David')).toBeInTheDocument();
-    expect(screen.getByText('Eve')).toBeInTheDocument();
+    // Each name appears twice: once in the final standings, once in the "Play Again?" list
+    for (const name of ['Alice', 'Bob', 'Charlie', 'David', 'Eve']) {
+      expect(screen.getAllByText(name)).toHaveLength(2);
+    }
 
     // Check scores are displayed
     expect(screen.getByText('4,500')).toBeInTheDocument();
@@ -132,7 +130,7 @@ describe('MultiplayerGameComplete - 5 Player Support', () => {
         currentPlayerId="p1"
         rematchRequests={rematchRequests}
         allPlayers={allPlayers}
-        onPlayAgain={vi.fn()}
+        onRematch={vi.fn()}
         onLeaveRoom={vi.fn()}
         hasRequestedRematch={true}
         rematchCountdown={null}
@@ -206,7 +204,7 @@ describe('MultiplayerGameComplete - Final Summary Enhancements', () => {
     currentPlayerId: 'player2',
     rematchRequests: new Set<string>(),
     allPlayers: mockPlayers,
-    onPlayAgain: vi.fn(),
+    onRematch: vi.fn(),
     onLeaveRoom: vi.fn(),
     hasRequestedRematch: false,
     rematchCountdown: null,
@@ -271,9 +269,13 @@ describe('MultiplayerGameComplete - Final Summary Enhancements', () => {
   it('uses standardized font colors - text-white for primary text', () => {
     render(<MultiplayerGameComplete {...defaultProps} />);
 
-    // Check that player names use text-white
-    const aliceElement = screen.getByText(/Alice/);
-    expect(aliceElement.className).toMatch(/text-white/);
+    // Non-winning player names use text-white (the winner is highlighted in green)
+    const [bobStanding, bobRematch] = screen.getAllByText('Bob');
+    expect(bobStanding.className).toMatch(/text-white/);
+    expect(bobRematch.className).toMatch(/text-white/);
+
+    const [aliceStanding] = screen.getAllByText('Alice');
+    expect(aliceStanding.className).toMatch(/text-green-400/);
   });
 
   it('uses standardized font colors - text-gray-300 for secondary text', () => {

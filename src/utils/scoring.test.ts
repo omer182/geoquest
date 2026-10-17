@@ -3,36 +3,42 @@ import { calculateScore, getLevelThreshold } from './scoring';
 
 describe('Scoring Algorithm (Geoguessr-style)', () => {
   describe('distance thresholds', () => {
-    it('should return 5000 points for perfect guess (0 km)', () => {
-      expect(calculateScore(0)).toBe(5000);
+    // Max score per round is 1500; anything beyond 1500 km scores 0.
+    it('should return 1500 points for perfect guess (0 km)', () => {
+      expect(calculateScore(0)).toBe(1500);
     });
 
-    it('should return ~5000 points for very close guesses (< 150m)', () => {
-      expect(calculateScore(0.1)).toBeGreaterThanOrEqual(4999);
-      expect(calculateScore(0.149)).toBeGreaterThanOrEqual(4999);
+    it('should return ~1500 points for very close guesses (< 150m)', () => {
+      expect(calculateScore(0.1)).toBe(1500);
+      expect(calculateScore(0.149)).toBe(1500);
     });
 
-    it('should return high scores for close guesses (< 10km)', () => {
-      expect(calculateScore(1)).toBeGreaterThan(4900);
-      expect(calculateScore(10)).toBeGreaterThan(4900);
-      expect(calculateScore(50)).toBeGreaterThan(4800);
+    it('should return high scores for close guesses (< 50km)', () => {
+      expect(calculateScore(1)).toBeGreaterThanOrEqual(1497);
+      expect(calculateScore(10)).toBeGreaterThan(1475);
+      expect(calculateScore(50)).toBeGreaterThan(1390);
     });
 
-    it('should return moderate scores for medium distances (100-500km)', () => {
-      expect(calculateScore(100)).toBeGreaterThan(4600);
-      expect(calculateScore(500)).toBeGreaterThan(3500);
-      expect(calculateScore(1000)).toBeGreaterThan(2500);
+    it('should return moderate scores for medium distances (100-1000km)', () => {
+      expect(calculateScore(100)).toBeGreaterThan(1280);
+      expect(calculateScore(500)).toBeGreaterThan(710);
+      expect(calculateScore(1000)).toBeGreaterThan(340);
     });
 
-    it('should return low scores for far distances (5000-10000km)', () => {
-      expect(calculateScore(5000)).toBeLessThan(200);
-      expect(calculateScore(10000)).toBeLessThan(10);
+    it('should return low scores near the 1500km cutoff', () => {
+      expect(calculateScore(1500)).toBeLessThan(200);
+      expect(calculateScore(1500)).toBeGreaterThan(0);
     });
 
-    it('should return 0 points for very far distances (>= 13800km)', () => {
-      expect(calculateScore(13800)).toBe(0);
-      expect(calculateScore(15000)).toBe(0);
+    it('should return 0 points beyond 1500km', () => {
+      expect(calculateScore(1501)).toBe(0);
+      expect(calculateScore(5000)).toBe(0);
       expect(calculateScore(20000)).toBe(0);
+    });
+
+    it('should never exceed 1500 points even with tier and level multipliers', () => {
+      expect(calculateScore(0, 3, 10)).toBe(1500);
+      expect(calculateScore(500, 2, 5)).toBe(1500);
     });
 
     it('should use exponential decay (closer guesses get exponentially more points)', () => {
@@ -91,7 +97,7 @@ describe('Level Threshold Configuration', () => {
     });
 
     it('should return sensible thresholds (not exceeding max possible score)', () => {
-      // Max possible score for 5 rounds is ~25,000 (5000 * 5)
+      // Max possible score for 5 rounds is 7,500 (1500 * 5)
       // Level thresholds cap at 10,000 for level 10+
       for (let level = 1; level <= 10; level++) {
         const threshold = getLevelThreshold(level);

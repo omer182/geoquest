@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CITIES, selectCitiesForLevel } from './cities';
+import { CITIES, getCitiesForLevel, selectCitiesForLevel } from './cities';
 import type { City } from '../types/city';
 
 describe('City Data', () => {
@@ -70,8 +70,10 @@ describe('City Data', () => {
   });
 
   describe('tier-based city filtering for different levels', () => {
-    it('should use only Tier 1 cities for levels 1-3', () => {
-      for (let level = 1; level <= 3; level++) {
+    // Each level draws from its own curated slice of CITIES, and tiers rise with level:
+    // levels 1-2 are Tier 1, levels 3-5 are Tier 2, levels 6-10 are Tier 3.
+    it('should use only Tier 1 cities for levels 1-2', () => {
+      for (let level = 1; level <= 2; level++) {
         const cities = selectCitiesForLevel(level, 10);
         cities.forEach(city => {
           expect(city.tier).toBe(1);
@@ -79,20 +81,20 @@ describe('City Data', () => {
       }
     });
 
-    it('should use Tier 1 and Tier 2 cities for levels 4-6', () => {
-      for (let level = 4; level <= 6; level++) {
-        const cities = selectCitiesForLevel(level, 15);
-        cities.forEach(city => {
-          expect([1, 2]).toContain(city.tier);
+    it('should use only Tier 2 cities for levels 3-5', () => {
+      for (let level = 3; level <= 5; level++) {
+        getCitiesForLevel(level).forEach(city => {
+          expect(city.tier).toBe(2);
         });
       }
     });
 
-    it('should use all tiers (1, 2, 3) for levels 7 and above', () => {
-      const cities = selectCitiesForLevel(7, 20);
-      cities.forEach(city => {
-        expect([1, 2, 3]).toContain(city.tier);
-      });
+    it('should use only Tier 3 cities for levels 6-10', () => {
+      for (let level = 6; level <= 10; level++) {
+        getCitiesForLevel(level).forEach(city => {
+          expect(city.tier).toBe(3);
+        });
+      }
     });
 
     it('should have at least 15 Tier 1 cities', () => {

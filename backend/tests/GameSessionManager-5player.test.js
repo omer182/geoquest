@@ -130,12 +130,13 @@ describe('GameSessionManager - 5 Player Support', () => {
       const player4Result = results.find(r => r.playerId === 'player4');
       const player5Result = results.find(r => r.playerId === 'player5');
 
-      // Auto-submitted guesses should have {0,0} coordinates
-      expect(player4Result.guess).toEqual({ lat: 0, lng: 0 });
-      expect(player5Result.guess).toEqual({ lat: 0, lng: 0 });
+      // Auto-submitted (no-pin) results have no guess, no distance and no points
+      expect(player4Result.guess).toBeNull();
+      expect(player5Result.guess).toBeNull();
+      expect(player4Result.distance).toBeNull();
+      expect(player4Result.score).toBe(0);
+      expect(player4Result.timeBonus).toBe(0);
 
-      // Auto-submitted guesses will have low scores based on distance from {0,0} to target
-      // Just verify they have lower scores than the players who actually guessed
       const player1Result = results.find(r => r.playerId === 'player1');
       expect(player4Result.score).toBeLessThan(player1Result.score);
       expect(player5Result.score).toBeLessThan(player1Result.score);
