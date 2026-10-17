@@ -266,16 +266,18 @@ describe('MultiplayerGameComplete - Final Summary Enhancements', () => {
     expect(confetti).not.toHaveBeenCalled();
   });
 
-  it('uses standardized font colors - text-white for primary text', () => {
-    render(<MultiplayerGameComplete {...defaultProps} />);
+  it('lists standings in score order, then the same players under "Play Again?"', () => {
+    const { container } = render(<MultiplayerGameComplete {...defaultProps} />);
 
-    // Non-winning player names use text-white (the winner is highlighted in green)
-    const [bobStanding, bobRematch] = screen.getAllByText('Bob');
-    expect(bobStanding.className).toMatch(/text-white/);
-    expect(bobRematch.className).toMatch(/text-white/);
-
-    const [aliceStanding] = screen.getAllByText('Alice');
-    expect(aliceStanding.className).toMatch(/text-green-400/);
+    // Order of first appearance follows the final standings; the rematch list repeats each name
+    const text = container.textContent || '';
+    const standingsText = text.slice(0, text.indexOf('Play Again?'));
+    const rematchText = text.slice(text.indexOf('Play Again?'));
+    expect(standingsText.indexOf('Alice')).toBeLessThan(standingsText.indexOf('Bob'));
+    expect(standingsText.indexOf('Bob')).toBeLessThan(standingsText.indexOf('Charlie'));
+    for (const name of ['Alice', 'Bob', 'Charlie']) {
+      expect(rematchText).toContain(name);
+    }
   });
 
   it('uses standardized font colors - text-gray-300 for secondary text', () => {

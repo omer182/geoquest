@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MultiplayerRoundResults from './MultiplayerRoundResults';
 import MultiplayerGameComplete from './MultiplayerGameComplete';
@@ -41,7 +41,8 @@ vi.mock('../hooks/useSocket', () => ({
 
 /** Distance, round and total cells of a player's row in the round results table */
 const rowCells = (playerName: string) =>
-  Array.from(screen.getByText(playerName).closest('tr')!.querySelectorAll('td'))
+  within(screen.getByText(playerName).closest('tr')!)
+    .getAllByRole('cell')
     .slice(1)
     .map(td => td.textContent);
 
@@ -561,6 +562,6 @@ describe('Cumulative Score Display Integration', () => {
 
     // Round score (with bonus) and running total in the row, plus the "Total Score:" summary
     expect(rowCells('Alice')).toEqual(['50', '1,450', '4,500']);
-    expect(screen.getByText(/Total Score/i).nextElementSibling?.textContent).toBe('4,500');
+    expect(screen.getByText(/Total Score/i).parentElement).toHaveTextContent(/Total Score:\s*4,500/);
   });
 });

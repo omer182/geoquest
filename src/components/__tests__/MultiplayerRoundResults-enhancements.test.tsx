@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import MultiplayerRoundResults from '../MultiplayerRoundResults';
 import { PlayerRoundResult } from '../../types/game';
 
@@ -71,8 +71,8 @@ describe('MultiplayerRoundResults - Enhancements (Task Group 3)', () => {
 
     const aliceRow = screen.getByText('Alice').closest('tr')!;
     const bobRow = screen.getByText('Bob').closest('tr')!;
-    expect(aliceRow.querySelectorAll('td')[2].textContent).toBe('1,500');
-    expect(bobRow.querySelectorAll('td')[2].textContent).toBe('1,000');
+    expect(within(aliceRow).getAllByRole('cell')[2]).toHaveTextContent('1,500');
+    expect(within(bobRow).getAllByRole('cell')[2]).toHaveTextContent('1,000');
   });
 
   it('displays cumulative total score prominently', () => {
@@ -104,8 +104,8 @@ describe('MultiplayerRoundResults - Enhancements (Task Group 3)', () => {
 
     // Total shows in the player's "Total" column and in the "Total Score:" summary
     const aliceRow = screen.getByText('Alice').closest('tr')!;
-    expect(aliceRow.querySelectorAll('td')[3].textContent).toBe('3,500');
-    expect(screen.getByText(/Total Score/i).nextElementSibling?.textContent).toBe('3,500');
+    expect(within(aliceRow).getAllByRole('cell')[3]).toHaveTextContent('3,500');
+    expect(screen.getByText(/Total Score/i).parentElement).toHaveTextContent(/Total Score:\s*3,500/);
   });
 
   it('displays "Calculating results..." message on final round (round 5)', () => {

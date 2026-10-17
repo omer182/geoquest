@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import MultiplayerRoundResults from './MultiplayerRoundResults';
 import { PlayerRoundResult } from '../types/game';
 
@@ -54,7 +54,7 @@ describe('MultiplayerRoundResults - 5 Player Support', () => {
     // formatted with commas. Rows are ordered by running total.
     const rows = screen.getAllByRole('row').slice(1); // skip header
     const cells = (row: HTMLElement) =>
-      Array.from(row.querySelectorAll('td')).map(td => td.textContent?.trim());
+      within(row).getAllByRole('cell').map(cell => cell.textContent?.trim());
     expect(cells(rows[0])).toEqual(['👑Alice(You)', '50', '1,050', '1,050']);
     expect(cells(rows[1])).toEqual(['Bob', '100', '930', '930']);
     expect(cells(rows[4])).toEqual(['Eve', '500', '420', '420']);
