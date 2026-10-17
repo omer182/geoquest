@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MultiplayerRoundResults from './MultiplayerRoundResults';
 import MultiplayerGameComplete from './MultiplayerGameComplete';
@@ -37,6 +37,14 @@ vi.mock('../hooks/useSocket', () => ({
     },
   }),
 }));
+
+
+/** Distance, round and total cells of a player's row in the round results table */
+const rowCells = (playerName: string) =>
+  within(screen.getByText(playerName).closest('tr')!)
+    .getAllByRole('cell')
+    .slice(1)
+    .map(td => td.textContent);
 
 describe('Continue Button Integration', () => {
   beforeEach(() => {
@@ -185,14 +193,15 @@ describe('Final Round Message Integration', () => {
 });
 
 describe('Time Bonus Display Integration', () => {
-  it('should display time bonus breakdown in results', () => {
+  // The "Round" column shows base score + time bonus; there is no separate bonus column
+  it('should include time bonus in each player round score', () => {
     const results: PlayerRoundResult[] = [
       {
         playerId: 'p1',
         playerName: 'Alice',
         distance: 50,
-        score: 1500,
-        timeBonus: 1000,
+        score: 1200,
+        timeBonus: 300,
         totalScore: 2500,
       },
       {
@@ -200,7 +209,7 @@ describe('Time Bonus Display Integration', () => {
         playerName: 'Bob',
         distance: 100,
         score: 800,
-        timeBonus: 500,
+        timeBonus: 150,
         totalScore: 1300,
       },
     ];
@@ -218,12 +227,8 @@ describe('Time Bonus Display Integration', () => {
       />
     );
 
-    // Check that time bonus is displayed for players
-    expect(screen.getByText(/1,000/)).toBeInTheDocument(); // Alice's time bonus
-    expect(screen.getByText(/500/)).toBeInTheDocument(); // Bob's time bonus
-
-    // Check that total score is displayed
-    expect(screen.getByText(/2,500/)).toBeInTheDocument(); // Alice's total
+    expect(rowCells('Alice')).toEqual(['50', '1,500', '2,500']); // 1200 + 300 bonus
+    expect(rowCells('Bob')).toEqual(['100', '950', '1,300']); // 800 + 150 bonus
   });
 
   it('should display zero time bonus for players who submitted late', () => {
@@ -251,9 +256,8 @@ describe('Time Bonus Display Integration', () => {
       />
     );
 
-    // Check that zero bonus is displayed
-    expect(screen.getByText('Alice')).toBeInTheDocument();
-    expect(screen.getByText('950')).toBeInTheDocument();
+    // Round score is just the base score when there is no bonus
+    expect(rowCells('Alice')).toEqual(['50', '950', '950']);
   });
 });
 
@@ -370,7 +374,7 @@ describe('Winner Confetti Integration', () => {
         currentPlayerId="p1"
         rematchRequests={new Set()}
         allPlayers={allPlayers}
-        onPlayAgain={vi.fn()}
+        onRematch={vi.fn()}
         onLeaveRoom={vi.fn()}
         hasRequestedRematch={false}
         rematchCountdown={null}
@@ -421,7 +425,7 @@ describe('Winner Confetti Integration', () => {
         currentPlayerId="p2"
         rematchRequests={new Set()}
         allPlayers={allPlayers}
-        onPlayAgain={vi.fn()}
+        onRematch={vi.fn()}
         onLeaveRoom={vi.fn()}
         hasRequestedRematch={false}
         rematchCountdown={null}
@@ -514,7 +518,7 @@ describe('Mobile Responsiveness at 375px (iPhone SE)', () => {
         currentPlayerId="p2"
         rematchRequests={new Set()}
         allPlayers={allPlayers}
-        onPlayAgain={vi.fn()}
+        onRematch={vi.fn()}
         onLeaveRoom={vi.fn()}
         hasRequestedRematch={false}
         rematchCountdown={null}
@@ -556,8 +560,8 @@ describe('Cumulative Score Display Integration', () => {
       />
     );
 
-    // Check that both round score and total score are displayed
-    expect(screen.getByText(/1,450/)).toBeInTheDocument(); // Round score
-    expect(screen.getByText(/4,500/)).toBeInTheDocument(); // Total score
+    // Round score (with bonus) and running total in the row, plus the "Total Score:" summary
+    expect(rowCells('Alice')).toEqual(['50', '1,450', '4,500']);
+    expect(screen.getByText(/Total Score/i).parentElement).toHaveTextContent(/Total Score:\s*4,500/);
   });
 });

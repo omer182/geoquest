@@ -71,7 +71,7 @@ describe('MultiplayerGameComplete - 5 Player Support', () => {
         currentPlayerId="p3"
         rematchRequests={new Set()}
         allPlayers={allPlayers}
-        onPlayAgain={vi.fn()}
+        onRematch={vi.fn()}
         onLeaveRoom={vi.fn()}
         hasRequestedRematch={false}
         rematchCountdown={null}
@@ -99,19 +99,17 @@ describe('MultiplayerGameComplete - 5 Player Support', () => {
         currentPlayerId="p1"
         rematchRequests={new Set()}
         allPlayers={allPlayers}
-        onPlayAgain={vi.fn()}
+        onRematch={vi.fn()}
         onLeaveRoom={vi.fn()}
         hasRequestedRematch={false}
         rematchCountdown={null}
       />
     );
 
-    // Check all 5 players are displayed in standings
-    expect(screen.getByText('Alice')).toBeInTheDocument();
-    expect(screen.getByText('Bob')).toBeInTheDocument();
-    expect(screen.getByText('Charlie')).toBeInTheDocument();
-    expect(screen.getByText('David')).toBeInTheDocument();
-    expect(screen.getByText('Eve')).toBeInTheDocument();
+    // Each name appears twice: once in the final standings, once in the "Play Again?" list
+    for (const name of ['Alice', 'Bob', 'Charlie', 'David', 'Eve']) {
+      expect(screen.getAllByText(name)).toHaveLength(2);
+    }
 
     // Check scores are displayed
     expect(screen.getByText('4,500')).toBeInTheDocument();
@@ -132,7 +130,7 @@ describe('MultiplayerGameComplete - 5 Player Support', () => {
         currentPlayerId="p1"
         rematchRequests={rematchRequests}
         allPlayers={allPlayers}
-        onPlayAgain={vi.fn()}
+        onRematch={vi.fn()}
         onLeaveRoom={vi.fn()}
         hasRequestedRematch={true}
         rematchCountdown={null}
@@ -206,7 +204,7 @@ describe('MultiplayerGameComplete - Final Summary Enhancements', () => {
     currentPlayerId: 'player2',
     rematchRequests: new Set<string>(),
     allPlayers: mockPlayers,
-    onPlayAgain: vi.fn(),
+    onRematch: vi.fn(),
     onLeaveRoom: vi.fn(),
     hasRequestedRematch: false,
     rematchCountdown: null,
@@ -216,29 +214,13 @@ describe('MultiplayerGameComplete - Final Summary Enhancements', () => {
     vi.clearAllMocks();
   });
 
-  it('renders gradient background matching MainMenu aesthetic', () => {
+  it('renders on the shared atlas screen like the other menus', () => {
     const { container } = render(<MultiplayerGameComplete {...defaultProps} />);
 
-    // Check for gradient background class on main container
-    const mainContainer = container.querySelector('.bg-gradient-to-br');
-    expect(mainContainer).toBeInTheDocument();
-
-    // Check for gradient colors from MainMenu pattern
-    expect(mainContainer?.className).toMatch(/from-slate-900/);
-    expect(mainContainer?.className).toMatch(/via-blue-950/);
-    expect(mainContainer?.className).toMatch(/to-slate-900/);
-  });
-
-  it('renders animated orbs for background decoration', () => {
-    const { container } = render(<MultiplayerGameComplete {...defaultProps} />);
-
-    // Check for animated orbs (floating background elements)
-    const orbs = container.querySelectorAll('.animate-float');
-    expect(orbs.length).toBeGreaterThan(0);
-
-    // Check for blur effect on orbs
-    const blurredOrbs = container.querySelectorAll('.blur-3xl');
-    expect(blurredOrbs.length).toBeGreaterThan(0);
+    // Decorative world-map backdrop is hidden from assistive tech
+    expect(container.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
+    // Content sits on the shared paper card
+    expect(container.querySelector('.atlas-card')).toBeInTheDocument();
   });
 
   it('triggers confetti for winner only', async () => {
@@ -268,35 +250,30 @@ describe('MultiplayerGameComplete - Final Summary Enhancements', () => {
     expect(confetti).not.toHaveBeenCalled();
   });
 
-  it('uses standardized font colors - text-white for primary text', () => {
-    render(<MultiplayerGameComplete {...defaultProps} />);
-
-    // Check that player names use text-white
-    const aliceElement = screen.getByText(/Alice/);
-    expect(aliceElement.className).toMatch(/text-white/);
-  });
-
-  it('uses standardized font colors - text-gray-300 for secondary text', () => {
+  it('lists standings in score order, then the same players under "Play Again?"', () => {
     const { container } = render(<MultiplayerGameComplete {...defaultProps} />);
 
-    // Check for secondary text colors (labels, descriptions)
-    const secondaryElements = container.querySelectorAll('.text-gray-300');
-    expect(secondaryElements.length).toBeGreaterThan(0);
+    // Order of first appearance follows the final standings; the rematch list repeats each name
+    const text = container.textContent || '';
+    const standingsText = text.slice(0, text.indexOf('Play Again?'));
+    const rematchText = text.slice(text.indexOf('Play Again?'));
+    expect(standingsText.indexOf('Alice')).toBeLessThan(standingsText.indexOf('Bob'));
+    expect(standingsText.indexOf('Bob')).toBeLessThan(standingsText.indexOf('Charlie'));
+    for (const name of ['Alice', 'Bob', 'Charlie']) {
+      expect(rematchText).toContain(name);
+    }
   });
 
-  it('uses success color (text-green-400) for winner and ready status', () => {
+  it('uses the atlas ink colours for primary and secondary text', () => {
     const { container } = render(<MultiplayerGameComplete {...defaultProps} />);
 
-    // Check for success/green color in winner's card or ready status
-    const successElements = container.querySelectorAll('.text-green-400, .bg-green-500, .border-green-500');
-    expect(successElements.length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('.text-ink').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('.text-ink-soft').length).toBeGreaterThan(0);
   });
 
-  it('uses semi-transparent card backgrounds with backdrop blur', () => {
+  it('highlights the winner in brass', () => {
     const { container } = render(<MultiplayerGameComplete {...defaultProps} />);
 
-    // Check for semi-transparent backgrounds on inner card
-    const transparentBgs = container.querySelectorAll('[class*="bg-slate-800/50"], [class*="backdrop-blur"]');
-    expect(transparentBgs.length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('.text-brass, .border-brass').length).toBeGreaterThan(0);
   });
 });

@@ -16,11 +16,26 @@ vi.mock('react-leaflet', () => ({
     <div data-testid="marker" data-position={JSON.stringify(position)} data-draggable={draggable} />
   ),
   GeoJSON: () => <div data-testid="geojson" />,
-  useMapEvents: () => {
-    // Return null for the map events hook
-    return null;
-  },
+  Polyline: () => <div data-testid="polyline" />,
+  Tooltip: () => null,
+  // Event hooks return the map, like the real hook
+  useMapEvents: () => fakeMap,
+  useMap: () => fakeMap,
 }));
+
+// Minimal Leaflet map stub for the pane / zoom helper components
+const fakeMap = {
+  getPane: () => undefined,
+  createPane: () => ({ style: {} }),
+  getSize: () => ({ x: 800, y: 600 }),
+  options: { zoomSnap: 0.25 },
+  setMinZoom: vi.fn(),
+  getZoom: () => 2,
+  setZoom: vi.fn(),
+  on: vi.fn(),
+  off: vi.fn(),
+  flyToBounds: vi.fn(),
+};
 
 // Mock fetch for GeoJSON data loading
 globalThis.fetch = vi.fn(() =>
@@ -40,12 +55,10 @@ describe('InteractiveMap', () => {
     expect(mapContainer).toBeInTheDocument();
   });
 
-  // Note: TileLayer was removed in favor of GeoJSON for country boundaries
-  // This test is commented out as it's no longer relevant to the current implementation
-  // it('renders TileLayer component', () => {
-  //   render(<InteractiveMap />);
-  //   expect(screen.getByTestId('tile-layer')).toBeInTheDocument();
-  // });
+  it('does not load terrain tiles by default (pure vector map)', () => {
+    render(<InteractiveMap />);
+    expect(screen.queryByTestId('tile-layer')).not.toBeInTheDocument();
+  });
 
   it('does not render marker initially when no pin is placed', () => {
     render(<InteractiveMap />);

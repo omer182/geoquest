@@ -4,8 +4,8 @@ A real-time multiplayer geography game where you race to pin cities on a map. Te
 
 ## Features
 
-- **Single Player** - Infinite progression through 10 difficulty levels with 500 cities
-- **Multiplayer** - Real-time 5-round matches with configurable timers (15s/30s/45s/60s)
+- **Single Player** - Infinite progression through 10 difficulty levels with 722 cities
+- **Multiplayer** - Real-time 5-round matches with configurable difficulty and timers (15s/30s/45s/60s)
 - **Room System** - Create/join games with shareable room codes
 - **Mobile-First** - Optimized for iPhone/Android with responsive design
 - **Interactive Map** - Pan, zoom, and pin locations with touch controls
@@ -209,7 +209,7 @@ geoquest/
 │   ├── context/          # GameContext, WebSocketContext
 │   ├── hooks/            # Custom React hooks
 │   ├── utils/            # Scoring, distance calculations
-│   ├── data/             # Cities database (500 cities)
+│   ├── data/             # City helpers (data lives in backend/data/cities.json)
 │   └── types/            # TypeScript definitions
 ├── backend/
 │   ├── src/              # Express server, Socket.IO handlers
@@ -222,17 +222,27 @@ geoquest/
 ## Game Modes
 
 ### Single Player
-- Infinite levels (1-∞)
-- 5 cities per level
-- Progressive difficulty (500 cities across 10 tiers)
-- Distance-based scoring with level multipliers
+- Infinite levels: 10 difficulty levels, then endless play on the hardest pool
+- 5 cities per level, at most one per country
+- Pass a level by reaching its target score (out of 5,000)
 
 ### Multiplayer
-- 2 players per room
-- 5-round matches
-- Configurable timer (15s/30s/45s/60s)
+- 2-5 players per room
+- 5-round matches, easiest city first
+- Host picks difficulty (Easy: levels 1-3, Medium: 4-7, Hard: 8-10) and timer (15s/30s/45s/60s)
+- Up to +25% speed bonus per round; ties are broken by accuracy
 - Real-time synchronization
 - Rematch functionality
+
+### Scoring and levels
+- Each round scores 0-1,000: 1,000 within 10 km, then smooth exponential decay.
+- The decay scale grows with the size of the city's country (the prompt always names the
+  country), so precision counts about the same everywhere, with a floor so small countries
+  aren't brutal.
+- `backend/data/cities.json` is the single city list for client and server. Each city's
+  `level` comes from a simulation of its expected score (how obscure it is and how hard it
+  is to place inside its country), and level targets are calibrated so a casual player
+  passes level 1 about 85% of the time and level 10 about 30%.
 
 ## Contributing
 

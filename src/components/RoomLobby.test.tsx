@@ -1,8 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import RoomLobby from './RoomLobby';
-import { GameProvider } from '../context/GameContext';
 import { SocketProvider } from '../hooks/useSocket';
+
+// GameProvider has no initialState prop, so feed the lobby state through a mocked useGame
+const mockGame = vi.hoisted(() => ({ state: null as any }));
+
+vi.mock('../context/GameContext', () => ({
+  useGame: () => ({ state: mockGame.state, dispatch: vi.fn() }),
+}));
 
 // Mock socket hooks
 vi.mock('../hooks/useSocket', () => ({
@@ -61,12 +67,10 @@ const renderWithProviders = (
     multiplayerGameState: null,
   };
 
+  mockGame.state = initialState || defaultState;
+
   const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-    <SocketProvider>
-      <GameProvider initialState={initialState || defaultState}>
-        {children}
-      </GameProvider>
-    </SocketProvider>
+    <SocketProvider>{children}</SocketProvider>
   );
 
   return render(component, { wrapper: TestWrapper });

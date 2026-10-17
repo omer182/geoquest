@@ -87,52 +87,60 @@ export default function MultiplayerRoundResults({
     setHasClickedContinue(true);
   };
 
-  // Sort results by total score (cumulative, descending - highest first)
-  const sortedResults = [...results].sort((a, b) => {
-    const totalA = a.totalScore || 0;
-    const totalB = b.totalScore || 0;
-    return totalB - totalA;
-  });
+  // Sort results by total score (cumulative, descending - highest first).
+  // Ties: this round's points, then the closer guess (no pin counts as furthest).
+  const distanceOf = (r: PlayerRoundResult) =>
+    r.distance === null || r.distance === undefined ? Infinity : r.distance;
+  const sortedResults = [...results].sort(
+    (a, b) =>
+      (b.totalScore || 0) - (a.totalScore || 0) ||
+      b.score + (b.timeBonus || 0) - (a.score + (a.timeBonus || 0)) ||
+      distanceOf(a) - distanceOf(b)
+  );
 
-  // Crown always goes to the top player (first in sorted list - highest total score)
+  // Crown always goes to the top player (first in sorted list)
   const winnerId = sortedResults.length > 0 ? sortedResults[0].playerId : null;
 
   // Check if this is the final round
   const isFinalRound = roundNumber === totalRounds;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 flex flex-col items-center justify-end pointer-events-none gap-3 px-4 pb-4 sm:pb-6" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+    <div
+      className="fixed inset-x-0 bottom-0 z-40 flex flex-col items-center justify-end pointer-events-none gap-3 px-4 pb-4 sm:pb-6"
+      style={{ maxHeight: '90vh', overflowY: 'auto' }}
+      data-map-overlay="bottom"
+    >
       {/* Results Card */}
-      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-3xl shadow-2xl border-2 border-black/30 p-2 sm:p-3 animate-slide-up w-full max-w-[calc(100vw-2rem)] sm:max-w-sm pointer-events-auto">
+      <div className="atlas-card p-3 sm:p-4 animate-slide-up w-full max-w-[calc(100vw-2rem)] sm:max-w-sm pointer-events-auto">
         {/* Header */}
         <div className="text-center mb-2">
-          <h3 className="text-sm sm:text-base font-bold text-white">
+          <h3 className="font-display text-lg sm:text-xl font-semibold text-ink">
             Round {roundNumber}/{totalRounds} • {targetCityName}
           </h3>
         </div>
 
         {/* Results Table */}
-        <div className="bg-dark-card rounded-lg overflow-hidden mb-2">
+        <div className="rounded-xl border border-paper-line overflow-hidden mb-2">
           <table className="w-full">
             <thead>
-              <tr className="bg-dark-surface border-b border-gray-700">
-                <th className="px-2 py-1 text-left text-[10px] sm:text-xs font-semibold text-gray-400 uppercase">
+              <tr className="bg-paper-deep border-b border-paper-line">
+                <th className="px-2 py-1.5 text-left text-[10px] sm:text-xs font-semibold text-ink-faint uppercase tracking-wider">
                   Player
                 </th>
-                <th className="px-2 py-1 text-right text-[10px] sm:text-xs font-semibold text-gray-400 uppercase">
+                <th className="px-2 py-1.5 text-right text-[10px] sm:text-xs font-semibold text-ink-faint uppercase tracking-wider">
                   <span className="hidden sm:inline">Dist.</span>
                   <span className="sm:hidden">D.</span>
                 </th>
-                <th className="px-2 py-1 text-right text-[10px] sm:text-xs font-semibold text-gray-400 uppercase">
+                <th className="px-2 py-1.5 text-right text-[10px] sm:text-xs font-semibold text-ink-faint uppercase tracking-wider">
                   Round
                 </th>
-                <th className="px-2 py-1 text-right text-[10px] sm:text-xs font-semibold text-gray-400 uppercase">
+                <th className="px-2 py-1.5 text-right text-[10px] sm:text-xs font-semibold text-ink-faint uppercase tracking-wider">
                   Total
                 </th>
               </tr>
             </thead>
             <tbody>
-              {sortedResults.map((result, index) => {
+              {sortedResults.map((result) => {
                 const isCurrentPlayer = result.playerId === currentPlayerId;
                 const isWinner = result.playerId === winnerId;
                 const timeBonus = result.timeBonus || 0;
@@ -142,35 +150,35 @@ export default function MultiplayerRoundResults({
                 return (
                   <tr
                     key={result.playerId}
-                    className={`border-b border-gray-700/50 last:border-b-0 ${
-                      isCurrentPlayer ? 'bg-primary/20' : index % 2 === 0 ? 'bg-dark-elevated' : 'bg-dark-card'
+                    className={`border-b border-paper-line/70 last:border-b-0 ${
+                      isCurrentPlayer ? 'bg-sea/20' : 'bg-white/40'
                     }`}
                   >
-                    <td className="px-2 py-1">
+                    <td className="px-2 py-1.5">
                       <div className="flex items-center gap-1">
                         {isWinner && <span className="text-xs">👑</span>}
-                        <span className="font-semibold text-white text-[11px] sm:text-xs truncate max-w-[80px] sm:max-w-none">
+                        <span className="font-semibold text-ink text-[11px] sm:text-sm truncate max-w-[80px] sm:max-w-none">
                           {result.playerName}
                           {isCurrentPlayer && (
-                            <span className="ml-1 text-[10px] text-gray-400">(You)</span>
+                            <span className="ml-1 text-[10px] font-normal text-ink-faint">(You)</span>
                           )}
                         </span>
                       </div>
                     </td>
-                    <td className="px-2 py-1 text-right">
-                      <span className="text-primary font-semibold text-[11px] sm:text-xs">
+                    <td className="px-2 py-1.5 text-right">
+                      <span className="text-sea-deep font-semibold text-[11px] sm:text-xs tabular-nums">
                         {result.distance !== null && result.distance !== undefined
                           ? formatNumber(Math.round(result.distance))
                           : '—'}
                       </span>
                     </td>
-                    <td className="px-2 py-1 text-right">
-                      <span className="text-green-400 font-bold text-xs sm:text-sm">
+                    <td className="px-2 py-1.5 text-right">
+                      <span className="text-moss font-bold text-xs sm:text-sm tabular-nums">
                         {formatNumber(roundTotal)}
                       </span>
                     </td>
-                    <td className="px-2 py-1 text-right">
-                      <span className="text-white font-bold text-xs sm:text-sm">
+                    <td className="px-2 py-1.5 text-right">
+                      <span className="text-ink font-bold text-xs sm:text-sm tabular-nums">
                         {formatNumber(cumulativeTotal)}
                       </span>
                     </td>
@@ -182,17 +190,15 @@ export default function MultiplayerRoundResults({
         </div>
 
         {/* Your Score Summary */}
-        <div className="bg-dark-surface rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 mb-2">
-          <div className="flex items-center justify-between text-[11px] sm:text-xs">
-            <span className="text-gray-300">Total Score:</span>
-            <span className="font-bold text-white text-sm sm:text-base">{formatNumber(totalScore)}</span>
-          </div>
+        <div className="flex items-center justify-between rounded-xl bg-ink px-3 py-2 text-paper">
+          <span className="text-xs font-medium text-paper/80">Total Score:</span>
+          <span className="font-display font-bold text-base sm:text-lg tabular-nums">{formatNumber(totalScore)}</span>
         </div>
 
         {/* Calculating Message (final round only) */}
         {countdown !== null && isFinalRound && (
-          <div className="text-center">
-            <p className="text-xs sm:text-sm text-primary animate-pulse">
+          <div className="text-center mt-2">
+            <p className="text-xs sm:text-sm text-compass animate-pulse">
               Calculating results...
             </p>
           </div>
@@ -204,11 +210,9 @@ export default function MultiplayerRoundResults({
         <button
           onClick={handleContinue}
           disabled={hasClickedContinue}
-          className={`${
-            hasClickedContinue
-              ? 'bg-gray-600 cursor-wait'
-              : 'bg-gradient-to-r from-teal-600 to-blue-600 hover:shadow-xl transform hover:scale-105'
-          } text-white font-bold py-2.5 px-4 sm:py-3 sm:px-8 rounded-full border-2 border-black/30 shadow-lg transition-all duration-200 min-h-[44px] text-xs sm:text-lg animate-slide-up pointer-events-auto w-auto max-w-[280px] sm:max-w-sm mx-auto`}
+          className={`btn min-h-[44px] rounded-full px-6 sm:px-8 animate-slide-up pointer-events-auto ${
+            hasClickedContinue ? 'hud-card cursor-wait text-ink-soft' : 'btn-primary'
+          }`}
           aria-label="Continue to next round"
         >
           {hasClickedContinue

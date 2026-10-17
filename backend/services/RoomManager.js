@@ -81,6 +81,12 @@ export class RoomManager {
         if (!room) {
             throw this.createError(SocketErrorCode.ROOM_NOT_FOUND, `Room ${roomCode} not found`);
         }
+        // Idempotent: a socket that is already in the room (e.g. a repeated or
+        // stale reconnect request) must not be added a second time
+        const existing = room.players.find((p) => p.id === socketId);
+        if (existing) {
+            return { room, player: existing };
+        }
         if (room.players.length >= room.maxPlayers) {
             throw this.createError(SocketErrorCode.ROOM_FULL, `Room ${roomCode} is full`);
         }

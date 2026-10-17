@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import MultiplayerRoundResults from '../MultiplayerRoundResults';
 import { PlayerRoundResult } from '../../types/game';
 
@@ -48,25 +48,31 @@ describe('MultiplayerRoundResults - Enhancements (Task Group 3)', () => {
     vi.clearAllMocks();
   });
 
-  it('displays time bonus breakdown in results for each player', () => {
-    const results = createMockResults(true);
+  it('folds the time bonus into each player round score', () => {
+    // The table has a single "Round" column showing base score + time bonus
+    const results: PlayerRoundResult[] = [
+      { playerId: 'player-1', playerName: 'Alice', distance: 100, score: 1200, timeBonus: 300, totalScore: 4100, guess: { lat: 40.7128, lng: -74.006 } },
+      { playerId: 'player-2', playerName: 'Bob', distance: 200, score: 1000, timeBonus: 0, totalScore: 3200, guess: { lat: 41.7128, lng: -73.006 } },
+    ];
 
     render(
       <MultiplayerRoundResults
-        roundNumber={1}
+        roundNumber={3}
         totalRounds={5}
         results={results}
         currentPlayerId="player-1"
         targetCityName="New York"
         countdown={5}
-        roundScore={5000}
-        totalScore={5000}
+        roundScore={1500}
+        totalScore={4100}
+        roomCode="ABC123"
       />
     );
 
-    // Check that time bonus is displayed for Alice
-    expect(screen.getByText(/1,500/)).toBeInTheDocument();
-    expect(screen.getByText(/Time Bonus/i)).toBeInTheDocument();
+    const aliceRow = screen.getByText('Alice').closest('tr')!;
+    const bobRow = screen.getByText('Bob').closest('tr')!;
+    expect(within(aliceRow).getAllByRole('cell')[2]).toHaveTextContent('1,500');
+    expect(within(bobRow).getAllByRole('cell')[2]).toHaveTextContent('1,000');
   });
 
   it('displays cumulative total score prominently', () => {
@@ -75,9 +81,9 @@ describe('MultiplayerRoundResults - Enhancements (Task Group 3)', () => {
         playerId: 'player-1',
         playerName: 'Alice',
         distance: 100,
-        score: 2000,
-        timeBonus: 500,
-        totalScore: 8500, // Cumulative total after multiple rounds
+        score: 1200,
+        timeBonus: 300,
+        totalScore: 3500, // Cumulative total after multiple rounds
         guess: { lat: 40.7128, lng: -74.006 },
       },
     ];
@@ -90,14 +96,16 @@ describe('MultiplayerRoundResults - Enhancements (Task Group 3)', () => {
         currentPlayerId="player-1"
         targetCityName="Paris"
         countdown={null}
-        roundScore={2500}
-        totalScore={8500}
+        roundScore={1500}
+        totalScore={3500}
+        roomCode="ABC123"
       />
     );
 
-    // Check that total score is displayed
-    expect(screen.getByText(/8,500/)).toBeInTheDocument();
-    expect(screen.getByText(/Total Score/i)).toBeInTheDocument();
+    // Total shows in the player's "Total" column and in the "Total Score:" summary
+    const aliceRow = screen.getByText('Alice').closest('tr')!;
+    expect(within(aliceRow).getAllByRole('cell')[3]).toHaveTextContent('3,500');
+    expect(screen.getByText(/Total Score/i).parentElement).toHaveTextContent(/Total Score:\s*3,500/);
   });
 
   it('displays "Calculating results..." message on final round (round 5)', () => {
@@ -120,7 +128,7 @@ describe('MultiplayerRoundResults - Enhancements (Task Group 3)', () => {
     expect(screen.getByText(/Calculating results/i)).toBeInTheDocument();
   });
 
-  it('displays "Next round in X..." message on non-final rounds (rounds 1-4)', () => {
+  it('displays a Continue button with countdown on non-final rounds (rounds 1-4)', () => {
     const results = createMockResults(true);
 
     render(
@@ -131,14 +139,14 @@ describe('MultiplayerRoundResults - Enhancements (Task Group 3)', () => {
         currentPlayerId="player-1"
         targetCityName="London"
         countdown={4}
-        roundScore={4000}
-        totalScore={9000}
+        roundScore={1500}
+        totalScore={3000}
+        roomCode="ABC123"
       />
     );
 
-    // Check for "Next round in..." text on non-final rounds
-    expect(screen.getByText(/Next round in/i)).toBeInTheDocument();
-    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Continue/i }).textContent).toBe('Continue (4)');
+    expect(screen.queryByText(/Calculating results/i)).not.toBeInTheDocument();
   });
 
   it('handles no-pin timeout display with "—" for distance', () => {

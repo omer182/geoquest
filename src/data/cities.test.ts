@@ -1,113 +1,100 @@
 import { describe, it, expect } from 'vitest';
-import { CITIES, selectCitiesForLevel } from './cities';
-import type { City } from '../types/city';
+import { CITIES, getCitiesForLevel, selectCitiesForLevel } from './cities';
+import * as backendCities from '../../backend/data/cities.js';
+import { MAX_LEVEL } from '../utils/scoring';
 
-describe('City Data', () => {
-  describe('city type structure validation', () => {
-    it('should have all cities with required fields', () => {
-      CITIES.forEach(city => {
-        expect(city).toHaveProperty('name');
-        expect(city).toHaveProperty('country');
-        expect(city).toHaveProperty('latitude');
-        expect(city).toHaveProperty('longitude');
-        expect(city).toHaveProperty('tier');
-
-        expect(typeof city.name).toBe('string');
-        expect(typeof city.country).toBe('string');
-        expect(typeof city.latitude).toBe('number');
-        expect(typeof city.longitude).toBe('number');
-        expect(typeof city.tier).toBe('number');
-
-        expect(city.name.length).toBeGreaterThan(0);
-        expect(city.country.length).toBeGreaterThan(0);
-      });
-    });
-
-    it('should have valid latitude and longitude ranges', () => {
-      CITIES.forEach(city => {
-        expect(city.latitude).toBeGreaterThanOrEqual(-90);
-        expect(city.latitude).toBeLessThanOrEqual(90);
-        expect(city.longitude).toBeGreaterThanOrEqual(-180);
-        expect(city.longitude).toBeLessThanOrEqual(180);
-      });
-    });
-
-    it('should have valid tier values (1, 2, or 3)', () => {
-      CITIES.forEach(city => {
-        expect([1, 2, 3]).toContain(city.tier);
-      });
-    });
+describe('city database', () => {
+  it('every city has valid fields', () => {
+    for (const c of CITIES) {
+      expect(c.name).toBeTruthy();
+      expect(c.country).toBeTruthy();
+      expect(c.latitude).toBeGreaterThanOrEqual(-90);
+      expect(c.latitude).toBeLessThanOrEqual(90);
+      expect(c.longitude).toBeGreaterThanOrEqual(-180);
+      expect(c.longitude).toBeLessThanOrEqual(180);
+      expect(Number.isInteger(c.level)).toBe(true);
+      expect(c.level).toBeGreaterThanOrEqual(1);
+      expect(c.level).toBeLessThanOrEqual(MAX_LEVEL);
+      expect(c.scaleKm).toBeGreaterThanOrEqual(100);
+      expect(c.scaleKm).toBeLessThanOrEqual(1200);
+    }
   });
 
-  describe('city selection returns correct number of unique cities', () => {
-    it('should return exactly 5 cities by default', () => {
-      const cities = selectCitiesForLevel(1);
-      expect(cities).toHaveLength(5);
-    });
-
-    it('should return requested number of cities', () => {
-      const cities = selectCitiesForLevel(1, 3);
-      expect(cities).toHaveLength(3);
-    });
-
-    it('should return only unique cities (no duplicates)', () => {
-      const cities = selectCitiesForLevel(1, 10);
-      const cityNames = cities.map(city => city.name);
-      const uniqueNames = new Set(cityNames);
-      expect(cityNames.length).toBe(uniqueNames.size);
-    });
-
-    it('should return City objects with all required properties', () => {
-      const cities = selectCitiesForLevel(1);
-      cities.forEach((city: City) => {
-        expect(city).toHaveProperty('name');
-        expect(city).toHaveProperty('country');
-        expect(city).toHaveProperty('latitude');
-        expect(city).toHaveProperty('longitude');
-        expect(city).toHaveProperty('tier');
-      });
-    });
+  it('has no duplicate cities', () => {
+    const keys = CITIES.map(c => `${c.name}|${c.country}`);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 
-  describe('tier-based city filtering for different levels', () => {
-    it('should use only Tier 1 cities for levels 1-3', () => {
-      for (let level = 1; level <= 3; level++) {
-        const cities = selectCitiesForLevel(level, 10);
-        cities.forEach(city => {
-          expect(city.tier).toBe(1);
-        });
+  it('has balanced levels with broad geographic spread', () => {
+    for (let level = 1; level <= MAX_LEVEL; level++) {
+      const pool = getCitiesForLevel(level);
+      expect(pool.length).toBeGreaterThanOrEqual(50);
+      expect(new Set(pool.map(c => c.country)).size).toBeGreaterThanOrEqual(15);
+    }
+  });
+
+  it('uses one score scale per country (the named country, not a border territory)', () => {
+    const scales = new Map<string, Set<number>>();
+    for (const c of CITIES) {
+      if (!scales.has(c.country)) scales.set(c.country, new Set());
+      scales.get(c.country)!.add(c.scaleKm);
+    }
+    for (const [country, set] of scales) {
+      expect({ country, scales: [...set] }).toEqual({ country, scales: [[...set][0]] });
+    }
+  });
+
+  it('is the same list the multiplayer server uses', () => {
+    expect(backendCities.CITIES).toEqual(CITIES);
+  });
+});
+
+describe('getCitiesForLevel', () => {
+  it('returns only cities of that level', () => {
+    expect(getCitiesForLevel(3).every(c => c.level === 3)).toBe(true);
+  });
+
+  it('reuses the hardest pool for endless levels beyond 10', () => {
+    expect(getCitiesForLevel(11)).toEqual(getCitiesForLevel(MAX_LEVEL));
+  });
+
+  it('rejects invalid levels', () => {
+    expect(() => getCitiesForLevel(0)).toThrow();
+    expect(() => getCitiesForLevel(1.5)).toThrow();
+  });
+});
+
+describe('selectCitiesForLevel', () => {
+  it('returns the requested number of cities from the level', () => {
+    const picked = selectCitiesForLevel(4);
+    expect(picked).toHaveLength(5);
+    expect(picked.every(c => c.level === 4)).toBe(true);
+  });
+
+  it('never repeats a country within one level run', () => {
+    for (let i = 0; i < 50; i++) {
+      for (const level of [1, 5, 10]) {
+        const countries = selectCitiesForLevel(level).map(c => c.country);
+        expect(new Set(countries).size).toBe(countries.length);
       }
-    });
+    }
+  });
 
-    it('should use Tier 1 and Tier 2 cities for levels 4-6', () => {
-      for (let level = 4; level <= 6; level++) {
-        const cities = selectCitiesForLevel(level, 15);
-        cities.forEach(city => {
-          expect([1, 2]).toContain(city.tier);
-        });
+  it('works for endless levels beyond 10', () => {
+    expect(selectCitiesForLevel(12)).toHaveLength(5);
+  });
+});
+
+describe('multiplayer city selection', () => {
+  it('maps difficulty to level ranges and orders rounds easiest first', () => {
+    for (const [difficulty, levels] of Object.entries(backendCities.DIFFICULTY_LEVELS)) {
+      const picked = backendCities.selectRandomCities(difficulty as 'easy' | 'medium' | 'hard', 5);
+      expect(picked).toHaveLength(5);
+      expect(picked.every(c => levels.includes(c.level))).toBe(true);
+      for (let i = 1; i < picked.length; i++) {
+        expect(picked[i].level).toBeGreaterThanOrEqual(picked[i - 1].level);
       }
-    });
-
-    it('should use all tiers (1, 2, 3) for levels 7 and above', () => {
-      const cities = selectCitiesForLevel(7, 20);
-      cities.forEach(city => {
-        expect([1, 2, 3]).toContain(city.tier);
-      });
-    });
-
-    it('should have at least 15 Tier 1 cities', () => {
-      const tier1Cities = CITIES.filter(city => city.tier === 1);
-      expect(tier1Cities.length).toBeGreaterThanOrEqual(15);
-    });
-
-    it('should have at least 10 Tier 2 cities', () => {
-      const tier2Cities = CITIES.filter(city => city.tier === 2);
-      expect(tier2Cities.length).toBeGreaterThanOrEqual(10);
-    });
-
-    it('should have at least 10 Tier 3 cities', () => {
-      const tier3Cities = CITIES.filter(city => city.tier === 3);
-      expect(tier3Cities.length).toBeGreaterThanOrEqual(10);
-    });
+      expect(new Set(picked.map(c => c.country)).size).toBe(5);
+    }
   });
 });

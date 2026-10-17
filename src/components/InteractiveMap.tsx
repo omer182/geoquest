@@ -1,11 +1,15 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { MapContainer, Marker, GeoJSON, useMapEvents, Polyline, useMap, Tooltip, TileLayer } from 'react-leaflet';
 import type { LatLngExpression, LeafletMouseEvent } from 'leaflet';
 import L from 'leaflet';
 import pinIconUrl from '@/assets/icons/pin.svg';
 import pinRedIconUrl from '@/assets/icons/pin-red.svg';
-import countriesGeoJSON from '@/assets/geo/countries.geojson?url';
+import countriesLowGeoJSON from '@/assets/geo/countries-low.geojson?url';
+import countriesMidGeoJSON from '@/assets/geo/countries-mid.geojson?url';
+import countriesHighGeoJSON from '@/assets/geo/countries.geojson?url';
 import usStatesGeoJSON from '@/assets/geo/us-states.geojson?url';
+import { greatCircleSegments, greatCircleMidpoint, findContainingFeature } from '@/utils/geo';
+import { COUNTRY_COLORS, OCEAN_COLOR } from '@/utils/mapStyle';
 
 /**
  * Component to initialize custom map panes with explicit z-index values
@@ -15,22 +19,21 @@ function MapPaneInitializer() {
   const map = useMap();
 
   useEffect(() => {
-    // Create custom panes if they don't exist
-    if (!map.getPane('linesPane')) {
-      const linesPane = map.createPane('linesPane');
-      linesPane.style.zIndex = '400'; // Below markers (600) but above overlays (400)
-    }
-    if (!map.getPane('pinsPane')) {
-      const pinsPane = map.createPane('pinsPane');
-      pinsPane.style.zIndex = '650'; // Above markers and tooltips
-    }
-    if (!map.getPane('countriesPane')) {
-      const countriesPane = map.createPane('countriesPane');
-      countriesPane.style.zIndex = '440'; // Below states so state borders render on top
-    }
-    if (!map.getPane('statesPane')) {
-      const statesPane = map.createPane('statesPane');
-      statesPane.style.zIndex = '450'; // Above countries for state borders, but fillOpacity: 0 so country fill shows
+    const panes: [name: string, zIndex: number, blend?: string][] = [
+      ['gratPane', 380], // Lat/lng grid over the ocean, hidden under land
+      ['linesPane', 500], // Above countries/relief/highlight, below markers (600)
+      ['countriesPane', 440], // Below states so state borders render on top
+      ['reliefPane', 445, 'multiply'], // Hillshade darkens the pastel fills to show terrain
+      ['statesPane', 450], // State borders above relief, fillOpacity: 0 so country fill shows
+      ['highlightPane', 455], // Target country outline after the reveal
+      ['pinsPane', 650], // Above markers and tooltips
+    ];
+    for (const [name, zIndex, blend] of panes) {
+      if (map.getPane(name)) continue;
+      const pane = map.createPane(name);
+      pane.style.zIndex = String(zIndex);
+      if (blend && RELIEF_ENABLED) pane.style.mixBlendMode = blend;
+      if (name !== 'pinsPane') pane.style.pointerEvents = 'none';
     }
   }, [map]);
 
@@ -112,13 +115,73 @@ interface GeoJSONFeatureCollection {
   features: GeoJSON.Feature[];
 }
 
-// Pastel color palette for Four Color Theorem
-// Soft, muted colors for a gentle, elegant map appearance
-const FOUR_COLORS = [
-  '#FFD4B3', // Soft peach - warm and inviting
-  '#E8C5D8', // Soft pinkish-lavender - gentle and elegant
-  '#C7E9C0', // Soft mint - fresh and soothing
-  '#FFF9C4', // Soft cream - warm and light
+/**
+ * Optional hillshade relief drawn over the country fills (multiply blend).
+ * Esri's World Hillshade has no labels and needs no API key. Off by default:
+ * the blend makes the browser re-composite the whole map on every frame while
+ * panning/zooming and new tiles stream in at each zoom level, which costs
+ * smoothness on phones. Set VITE_MAP_RELIEF=on to bring it back.
+ */
+const RELIEF_ENABLED = import.meta.env.VITE_MAP_RELIEF === 'on';
+
+/**
+ * Border detail by zoom. Redrawing every border point on each zoom step was
+ * the main source of jank (~160k points ≈ 47 ms per redraw at world view), so
+ * the map swaps between Douglas-Peucker-simplified copies of the same borders:
+ *   low  (tolerance 0.08°, ~24k points): zoom < 4, sub-pixel at that scale
+ *   mid  (0.02°, ~52k points):           zoom 4-6, mostly off-screen anyway
+ *   high (full 50m data, ~100k points):  zoom 6+
+ * US state lines only appear from zoom 4, where they're actually readable.
+ */
+type Detail = 'low' | 'mid' | 'high';
+const detailForZoom = (z: number): Detail => (z < 4 ? 'low' : z < 6 ? 'mid' : 'high');
+const COUNTRY_URLS: Record<Detail, string> = {
+  low: countriesLowGeoJSON,
+  mid: countriesMidGeoJSON,
+  high: countriesHighGeoJSON,
+};
+
+/**
+ * Parsed border data, cached for the whole visit. The map remounts every round,
+ * so without this each round would re-download and re-parse the same files.
+ */
+const geoCache = new Map<string, Promise<GeoJSONFeatureCollection>>();
+function fetchGeo(url: string): Promise<GeoJSONFeatureCollection> {
+  let pending = geoCache.get(url);
+  if (!pending) {
+    pending = fetch(url).then(response => response.json());
+    pending.catch(() => geoCache.delete(url)); // allow a retry after a failed download
+    geoCache.set(url, pending);
+  }
+  return pending;
+}
+
+/**
+ * Reports the current detail level, re-rendering only when it changes
+ * (not on every fractional zoom step).
+ */
+function DetailWatcher({ onChange }: { onChange: (detail: Detail) => void }) {
+  const map = useMapEvents({
+    zoomend: () => onChange(detailForZoom(map.getZoom())),
+  });
+  useEffect(() => onChange(detailForZoom(map.getZoom())), [map, onChange]);
+  return null;
+}
+const RELIEF_URL =
+  'https://services.arcgisonline.com/arcgis/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}';
+
+/**
+ * Latitude/longitude grid every 30° to give the ocean some structure.
+ */
+const GRATICULE: [number, number][][] = [
+  ...[-60, -30, 0, 30, 60].map(lat => [
+    [lat, -180],
+    [lat, 180],
+  ] as [number, number][]),
+  ...[-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150].map(lng => [
+    [-85, lng],
+    [85, lng],
+  ] as [number, number][]),
 ];
 
 /**
@@ -168,41 +231,103 @@ const createColoredPinIcon = (color: string) => {
 };
 
 /**
+ * Keeps the minimum zoom high enough that one copy of the world always fills
+ * the container, so wide screens never show empty space past ±180° and tall
+ * phone screens never show empty bands above the Arctic / below Antarctica.
+ * (The Web Mercator world is square: 256px × 2^zoom on each side.)
+ */
+function WorldFitController() {
+  const map = useMap();
+
+  useEffect(() => {
+    const fit = () => {
+      const { x: width, y: height } = map.getSize();
+      const snap = map.options.zoomSnap || 1;
+      const minZoom = Math.max(1, Math.ceil(Math.log2(Math.max(width, height) / 256) / snap) * snap);
+      map.setMinZoom(minZoom);
+      if (map.getZoom() < minZoom) map.setZoom(minZoom, { animate: false });
+    };
+    fit();
+    map.on('resize', fit);
+    return () => {
+      map.off('resize', fit);
+    };
+  }, [map]);
+
+  return null;
+}
+
+/**
+ * Result line style shared by single player and multiplayer: a bold dashed
+ * great-circle arc from the guess to the city.
+ */
+const resultLineOptions = (color: string, opacity: number): L.PathOptions => ({
+  color,
+  weight: 4,
+  opacity,
+  dashArray: '10, 8',
+  lineCap: 'round',
+  lineJoin: 'round',
+  fill: false,
+});
+
+/**
+ * Distance pill placed at the midpoint of a result line. In multiplayer the
+ * border takes the player's colour so each label matches its line.
+ */
+const distanceLabelIcon = (km: number, opacity: number, borderColor?: string) =>
+  new L.DivIcon({
+    html: `<div class="distance-label" style="opacity: ${opacity}${
+      borderColor ? `; border-color: ${borderColor}; box-shadow: 0 0 0 2px ${borderColor}55, 0 4px 10px -2px rgba(30,42,68,0.5)` : ''
+    }">${Math.round(km).toLocaleString('en-US')} km</div>`,
+    className: 'distance-label-container',
+    iconSize: [120, 30],
+    iconAnchor: [60, 15],
+  });
+
+/**
+ * Padding for the results zoom so every pin, line and label lands in the part
+ * of the map the HUD leaves free. Overlays opt in with data-map-overlay:
+ *   "bottom" - fixed result cards (measured at their final position, so the
+ *              slide-up animation doesn't matter)
+ *   "top"    - cards pinned to the top of the map (score card)
+ */
+function overlayPadding(map: L.Map): { topLeft: L.PointTuple; bottomRight: L.PointTuple } {
+  const rect = map.getContainer().getBoundingClientRect();
+  let top = 0;
+  let bottom = 0;
+  document.querySelectorAll<HTMLElement>('[data-map-overlay]').forEach(el => {
+    if (el.dataset.mapOverlay === 'bottom') {
+      const offset = parseFloat(getComputedStyle(el).bottom) || 0;
+      const finalTop = window.innerHeight - offset - el.offsetHeight;
+      bottom = Math.max(bottom, rect.bottom - finalTop);
+    } else {
+      top = Math.max(top, el.getBoundingClientRect().bottom - rect.top);
+    }
+  });
+
+  // Room for the pin icon + its name tag above the topmost pin, a little below the lowest
+  let padTop = top + 80;
+  let padBottom = bottom + 24;
+  const side = Math.round(Math.min(70, rect.width * 0.1));
+
+  // On short screens never squeeze the visible map below ~140px
+  const maxTotal = Math.max(0, rect.height - 140);
+  if (padTop + padBottom > maxTotal) {
+    const k = maxTotal / (padTop + padBottom);
+    padTop = Math.round(padTop * k);
+    padBottom = Math.round(padBottom * k);
+  }
+  return { topLeft: [side, padTop], bottomRight: [side, padBottom] };
+}
+
+/**
  * Internal component to handle map click events for pin placement
  */
 function MapClickHandler({ onMapClick, disabled }: { onMapClick: (e: LeafletMouseEvent) => void; disabled?: boolean }) {
   useMapEvents({
     click: disabled ? () => {} : onMapClick,
   });
-  return null;
-}
-
-/**
- * Component to disable map interactions when showing results
- */
-function MapInteractionController({ disabled }: { disabled: boolean }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (disabled) {
-      // Disable all map interactions
-      map.dragging.disable();
-      map.touchZoom.disable();
-      map.doubleClickZoom.disable();
-      map.scrollWheelZoom.disable();
-      map.boxZoom.disable();
-      map.keyboard.disable();
-    } else {
-      // Re-enable map interactions
-      map.dragging.enable();
-      map.touchZoom.enable();
-      map.doubleClickZoom.enable();
-      map.scrollWheelZoom.enable();
-      map.boxZoom.enable();
-      map.keyboard.enable();
-    }
-  }, [disabled, map]);
-
   return null;
 }
 
@@ -224,90 +349,75 @@ function MapZoomHandler({
 }) {
   const map = useMap();
   const hasZoomedRef = useRef(false);
+  // Pending zoom/completion timers. Kept in a ref (not effect cleanup) so a parent
+  // re-render mid-animation - e.g. the multiplayer countdown ticking every second -
+  // can't cancel the completion callback that fades the result lines in.
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  // Reset zoom flag when showLine changes
+  // Reset when the results are hidden, and on unmount
   useEffect(() => {
     if (!showLine) {
       hasZoomedRef.current = false;
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current = [];
     }
   }, [showLine]);
+  useEffect(
+    () => () => {
+      timersRef.current.forEach(clearTimeout);
+    },
+    []
+  );
 
   useEffect(() => {
     // Prevent multiple zoom animations
-    if (hasZoomedRef.current) {
+    if (hasZoomedRef.current || !targetLocation || !showLine) {
       return;
     }
 
-    // For multiplayer mode with playerGuesses
-    if (playerGuesses && playerGuesses.length > 0 && targetLocation && showLine) {
-      hasZoomedRef.current = true;
-      const timer = setTimeout(() => {
-        // Create bounds including all player guesses and target
-        const allPoints: [number, number][] = [
-          ...playerGuesses.map(pg => [pg.guess.lat, pg.guess.lng] as [number, number]),
-          [targetLocation.lat, targetLocation.lng],
-        ];
-
-        const bounds = L.latLngBounds(allPoints);
-
-        // Use flyToBounds with optimized animation
-        // Increased padding to zoom out 20% for better visibility of all pins
-        map.flyToBounds(bounds, {
-          padding: [150, 150],
-          duration: 0.8, // Fast but visible animation
-          easeLinearity: 0.25,
-          maxZoom: 7,
-          animate: true,
-        });
-
-        const completeTimer = setTimeout(() => {
-          if (onZoomComplete) {
-            onZoomComplete();
-          }
-        }, 800); // Match animation duration
-
-        return () => clearTimeout(completeTimer);
-      }, 300);
-
-      return () => clearTimeout(timer);
-    }
-
-    // For single-player mode
-    if (!displayPinPosition || !targetLocation || !showLine) {
+    // Multiplayer: frame every player's guess; single-player: frame the one guess
+    const guesses =
+      playerGuesses && playerGuesses.length > 0
+        ? playerGuesses.map(pg => pg.guess)
+        : displayPinPosition
+          ? [displayPinPosition]
+          : [];
+    if (guesses.length === 0) {
       return;
     }
 
     hasZoomedRef.current = true;
+
     // Small delay before starting zoom animation
     const timer = setTimeout(() => {
-      const bounds = L.latLngBounds([
-        [displayPinPosition.lat, displayPinPosition.lng],
-        [targetLocation.lat, targetLocation.lng],
-      ]);
+      // Include the great-circle path so arcs over the poles stay on screen
+      const allPoints: [number, number][] = [];
+      for (const guess of guesses) {
+        for (const segment of greatCircleSegments(guess, targetLocation, 16)) {
+          allPoints.push(...segment);
+        }
+      }
 
-      console.log('Zooming to bounds:', bounds);
-
-      // Use flyToBounds with optimized animation
-      // Increased padding to zoom out 20% for better visibility of both pins
-      map.flyToBounds(bounds, {
-        padding: [150, 150],
+      // Fit everything into the space left free by the score and results cards
+      const { topLeft, bottomRight } = overlayPadding(map);
+      // flyToBounds ignores maxBounds, and the off-centre padding can push the view
+      // past ±180°; ease back inside the world once the flight lands
+      map.once('moveend', () => {
+        const limits = map.options.maxBounds;
+        if (limits) map.panInsideBounds(limits, { animate: true, duration: 0.3 });
+      });
+      map.flyToBounds(L.latLngBounds(allPoints), {
+        paddingTopLeft: topLeft,
+        paddingBottomRight: bottomRight,
         duration: 0.8, // Fast but visible animation
         easeLinearity: 0.25,
         maxZoom: 7,
         animate: true,
       });
 
-      // Trigger callback after animation
-      const completeTimer = setTimeout(() => {
-        if (onZoomComplete) {
-          onZoomComplete();
-        }
-      }, 800); // Match animation duration
-
-      return () => clearTimeout(completeTimer);
-    }, 300); // 300ms delay for better UX
-
-    return () => clearTimeout(timer);
+      timersRef.current.push(setTimeout(() => onZoomComplete?.(), 800)); // Match animation duration
+    }, 300);
+    timersRef.current.push(timer);
   }, [displayPinPosition, targetLocation, showLine, map, onZoomComplete, playerGuesses]);
 
   return null;
@@ -343,7 +453,8 @@ export default function InteractiveMap({
   const displayPinPosition = guessLocation || pinPosition;
 
   // State for GeoJSON country data
-  const [countriesData, setCountriesData] = useState<GeoJSONFeatureCollection | null>(null);
+  const [countries, setCountries] = useState<Partial<Record<Detail, GeoJSONFeatureCollection>>>({});
+  const [detail, setDetail] = useState<Detail>('low');
 
   // State for USA states GeoJSON data
   const [usStatesData, setUsStatesData] = useState<GeoJSONFeatureCollection | null>(null);
@@ -352,19 +463,8 @@ export default function InteractiveMap({
   const [lineOpacity, setLineOpacity] = useState(0);
   const hasFadedInRef = useRef(false);
 
-  // Store generated colors for each country using Four Color Theorem
-  const countryColorsRef = useRef<Map<string, string>>(new Map());
-
-  // Store adjacency information for Four Color Theorem
-  const adjacencyMapRef = useRef<Map<string, Set<string>>>(new Map());
-
-  // Canvas renderer for smooth line rendering during zoom animations
-  // SVG causes pixelation during zoom, Canvas provides smooth scaling
-  // Increased padding for better rendering during zoom
-  const canvasRenderer = useRef(L.canvas({ padding: 1.0, tolerance: 5 }));
-
   // Initial map center: global view at 0 latitude, 0 longitude
-  const center: LatLngExpression = [0, 0];
+  const center: LatLngExpression = [20, 0];
 
   // Initial zoom level to display full world map on mobile
   const zoom = 2;
@@ -408,262 +508,85 @@ export default function InteractiveMap({
     }
   }, [onZoomComplete]);
 
-  // Load GeoJSON data on mount and apply Four Color Theorem
+  // Load border data: the light world-view copy first, more detail only once it's needed
+  const mountedRef = useRef(true);
   useEffect(() => {
-    // Fetch countries GeoJSON data from the URL
-    fetch(countriesGeoJSON)
-      .then(response => response.json())
-      .then((data: GeoJSONFeatureCollection) => {
-        console.log('Countries GeoJSON loaded, features count:', data.features.length);
-
-        // Build adjacency map
-        const adjacencyMap = buildAdjacencyMap(data.features);
-        adjacencyMapRef.current = adjacencyMap;
-
-        // Assign colors using Four Color Theorem
-        data.features.forEach(feature => {
-          const countryName = feature.properties?.NAME;
-          if (countryName && !countryColorsRef.current.has(countryName)) {
-            const color = assignColorToCountry(countryName, adjacencyMap);
-            countryColorsRef.current.set(countryName, color);
-          }
-        });
-
-        setCountriesData(data);
-      })
-      .catch(error => {
-        console.error('Failed to load countries GeoJSON:', error);
-      });
-
-    // Fetch USA states GeoJSON data
-    fetch(usStatesGeoJSON)
-      .then(response => response.json())
-      .then((data: GeoJSONFeatureCollection) => {
-        console.log('USA states GeoJSON loaded, features count:', data.features.length);
-        setUsStatesData(data);
-      })
-      .catch(error => {
-        console.error('Failed to load USA states GeoJSON:', error);
-      });
-
-    /**
-     * Get bounding box for a feature
-     */
-    const getFeatureBounds = (feature: GeoJSON.Feature) => {
-      if (!feature.geometry) return null;
-
-      let minLat = Infinity,
-        maxLat = -Infinity;
-      let minLng = Infinity,
-        maxLng = -Infinity;
-
-      const processCoordinates = (coords: number[] | number[][] | number[][][]): void => {
-        if (typeof coords[0] === 'number') {
-          // This is a [lng, lat] pair
-          minLng = Math.min(minLng, coords[0] as number);
-          maxLng = Math.max(maxLng, coords[0] as number);
-          minLat = Math.min(minLat, coords[1] as number);
-          maxLat = Math.max(maxLat, coords[1] as number);
-        } else {
-          // This is an array of coordinates
-          (coords as number[][] | number[][][]).forEach(processCoordinates);
-        }
-      };
-
-      if (feature.geometry.type === 'Polygon') {
-        const polygon = feature.geometry as GeoJSON.Polygon;
-        processCoordinates(polygon.coordinates as number[][][]);
-      } else if (feature.geometry.type === 'MultiPolygon') {
-        const multiPolygon = feature.geometry as GeoJSON.MultiPolygon;
-        multiPolygon.coordinates.forEach(coords => processCoordinates(coords as number[][][]));
-      }
-
-      return {
-        north: maxLat,
-        south: minLat,
-        east: maxLng,
-        west: minLng,
-      };
-    };
-
-    /**
-     * Check if two countries share a border
-     * First check bounding box overlap, then verify with coordinate proximity
-     */
-    const areCountriesAdjacent = (
-      feature1: GeoJSON.Feature,
-      feature2: GeoJSON.Feature
-    ): boolean => {
-      const bounds1 = getFeatureBounds(feature1);
-      const bounds2 = getFeatureBounds(feature2);
-
-      if (!bounds1 || !bounds2) return false;
-
-      // First, quick rejection test: if bounding boxes don't overlap or touch, countries can't be adjacent
-      const bboxThreshold = 0.5; // degrees - slightly larger for initial check
-      const bboxesOverlap = !(
-        bounds1.east < bounds2.west - bboxThreshold ||
-        bounds1.west > bounds2.east + bboxThreshold ||
-        bounds1.north < bounds2.south - bboxThreshold ||
-        bounds1.south > bounds2.north + bboxThreshold
-      );
-
-      if (!bboxesOverlap) return false;
-
-      // If bounding boxes overlap, check actual coordinate proximity
-      const coords1 = extractBorderCoordinates(feature1);
-      const coords2 = extractBorderCoordinates(feature2);
-
-      if (coords1.length === 0 || coords2.length === 0) return false;
-
-      // Check if any border points are very close
-      const threshold = 0.001; // Very small threshold in degrees (~111 meters)
-
-      // Use a spatial hash for efficiency
-      const gridSize = 0.1;
-      const hash2 = new Map<string, [number, number][]>();
-
-      // Build spatial hash for coords2
-      for (const coord of coords2) {
-        const key = `${Math.floor(coord[0] / gridSize)},${Math.floor(coord[1] / gridSize)}`;
-        if (!hash2.has(key)) {
-          hash2.set(key, []);
-        }
-        hash2.get(key)!.push(coord);
-      }
-
-      // Check coords1 against nearby cells in hash2
-      for (const [lng1, lat1] of coords1) {
-        const baseX = Math.floor(lng1 / gridSize);
-        const baseY = Math.floor(lat1 / gridSize);
-
-        // Check this cell and 8 surrounding cells
-        for (let dx = -1; dx <= 1; dx++) {
-          for (let dy = -1; dy <= 1; dy++) {
-            const key = `${baseX + dx},${baseY + dy}`;
-            const nearbyCoords = hash2.get(key);
-            if (!nearbyCoords) continue;
-
-            for (const [lng2, lat2] of nearbyCoords) {
-              const distance = Math.sqrt(Math.pow(lng1 - lng2, 2) + Math.pow(lat1 - lat2, 2));
-              if (distance < threshold) {
-                return true;
-              }
-            }
-          }
-        }
-      }
-
-      return false;
-    };
-
-    /**
-     * Extract border coordinates from a feature (sampling for performance)
-     */
-    const extractBorderCoordinates = (feature: GeoJSON.Feature): [number, number][] => {
-      if (!feature.geometry) return [];
-
-      const points: [number, number][] = [];
-      let pointCount = 0;
-      const maxPoints = 500; // Limit points per country for performance
-
-      const addPoints = (coords: number[] | number[][] | number[][][]): void => {
-        if (pointCount >= maxPoints) return;
-
-        if (typeof coords[0] === 'number') {
-          // This is a [lng, lat] pair
-          points.push([coords[0] as number, coords[1] as number]);
-          pointCount++;
-        } else {
-          // This is an array of coordinates
-          (coords as number[][] | number[][][]).forEach(addPoints);
-        }
-      };
-
-      if (feature.geometry.type === 'Polygon') {
-        const polygon = feature.geometry as GeoJSON.Polygon;
-        // Only use outer ring (first array) for border detection
-        if (polygon.coordinates[0]) {
-          addPoints(polygon.coordinates[0] as number[][]);
-        }
-      } else if (feature.geometry.type === 'MultiPolygon') {
-        const multiPolygon = feature.geometry as GeoJSON.MultiPolygon;
-        multiPolygon.coordinates.forEach(polyCoords => {
-          // Only use outer ring of each polygon
-          if (polyCoords[0]) {
-            addPoints(polyCoords[0] as number[][]);
-          }
-        });
-      }
-
-      return points;
-    };
-
-    /**
-     * Builds adjacency map by checking which countries share borders
-     */
-    const buildAdjacencyMap = (features: GeoJSON.Feature[]) => {
-      const adjacencyMap = new Map<string, Set<string>>();
-
-      features.forEach(feature => {
-        const countryName = feature.properties?.NAME;
-        if (!countryName) return;
-
-        if (!adjacencyMap.has(countryName)) {
-          adjacencyMap.set(countryName, new Set());
-        }
-      });
-
-      // Check for adjacency by comparing geometries
-      // Two countries are adjacent if they share a border
-      for (let i = 0; i < features.length; i++) {
-        for (let j = i + 1; j < features.length; j++) {
-          const country1 = features[i].properties?.NAME;
-          const country2 = features[j].properties?.NAME;
-
-          if (!country1 || !country2) continue;
-
-          // Check if countries are adjacent by examining their geometries
-          if (areCountriesAdjacent(features[i], features[j])) {
-            adjacencyMap.get(country1)?.add(country2);
-            adjacencyMap.get(country2)?.add(country1);
-          }
-        }
-      }
-
-      return adjacencyMap;
-    };
-
-    /**
-     * Assign color to a country using greedy Four Color Theorem algorithm
-     */
-    const assignColorToCountry = (
-      countryName: string,
-      adjacencyMap: Map<string, Set<string>>
-    ): string => {
-      const neighbors = adjacencyMap.get(countryName);
-      if (!neighbors) return FOUR_COLORS[0];
-
-      // Get colors used by neighbors
-      const usedColors = new Set<string>();
-      neighbors.forEach(neighbor => {
-        const neighborColor = countryColorsRef.current.get(neighbor);
-        if (neighborColor) {
-          usedColors.add(neighborColor);
-        }
-      });
-
-      // Find first available color not used by neighbors
-      for (const color of FOUR_COLORS) {
-        if (!usedColors.has(color)) {
-          return color;
-        }
-      }
-
-      // Fallback to first color (shouldn't happen with proper Four Color Theorem)
-      return FOUR_COLORS[0];
+    // Re-arm on (re)mount: React's dev StrictMode unmounts and remounts once
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
     };
   }, []);
+  const load = useCallback((url: string, set: (d: GeoJSONFeatureCollection) => void, label: string) => {
+    fetchGeo(url)
+      .then(data => {
+        if (mountedRef.current) set(data);
+      })
+      .catch(error => console.error(`Failed to load ${label} GeoJSON:`, error));
+  }, []);
+  // Track requests so each file downloads once (a dev-mode remount may drop the
+  // first response, so a level counts as requested only until its data arrives or fails)
+  const requestedRef = useRef(new Set<Detail>());
+  const statesRequestedRef = useRef(false);
+  useEffect(
+    () => () => {
+      requestedRef.current.clear();
+      statesRequestedRef.current = false;
+    },
+    []
+  );
+  const ensureCountries = useCallback(
+    (level: Detail) => {
+      if (requestedRef.current.has(level)) return;
+      requestedRef.current.add(level);
+      load(COUNTRY_URLS[level], data => setCountries(p => ({ ...p, [level]: data })), `${level} countries`);
+    },
+    [load]
+  );
+  useEffect(() => ensureCountries('low'), [ensureCountries]);
+  useEffect(() => {
+    if (detail !== 'low') ensureCountries(detail);
+    if (detail !== 'low' && !statesRequestedRef.current) {
+      statesRequestedRef.current = true;
+      load(usStatesGeoJSON, setUsStatesData, 'USA states');
+    }
+  }, [detail, ensureCountries, load]);
+  // The reveal outlines the target country, which needs better than world-view borders
+  useEffect(() => {
+    if (targetLocation) ensureCountries('mid');
+  }, [targetLocation, ensureCountries]);
+
+  // Best borders loaded so far for the current zoom (falls back to a coarser copy while loading)
+  const order: Detail[] = detail === 'high' ? ['high', 'mid', 'low'] : detail === 'mid' ? ['mid', 'low'] : ['low'];
+  const shownDetail = order.find(level => countries[level]);
+  const countriesData = shownDetail ? countries[shownDetail] : undefined;
+
+  // Country containing the target city, outlined after the reveal
+  const lookupCountries = countries.high ?? countries.mid;
+  const targetCountry = useMemo(() => {
+    if (!targetLocation || !lookupCountries) return null;
+    return findContainingFeature(lookupCountries.features, targetLocation);
+  }, [targetLocation, lookupCountries]);
+
+  // Great-circle paths from each guess to the target
+  const guessArc = useMemo(
+    () =>
+      showLine && displayPinPosition && targetLocation
+        ? greatCircleSegments(displayPinPosition, targetLocation)
+        : null,
+    [showLine, displayPinPosition, targetLocation]
+  );
+  const playerArcs = useMemo(
+    () =>
+      showLine && playerGuesses && targetLocation
+        ? playerGuesses.map(pg => ({
+            ...pg,
+            arc: greatCircleSegments(pg.guess, targetLocation),
+            mid: greatCircleMidpoint(pg.guess, targetLocation),
+          }))
+        : [],
+    [showLine, playerGuesses, targetLocation]
+  );
 
   /**
    * Handle map click/tap events to place pin
@@ -702,73 +625,41 @@ export default function InteractiveMap({
 
   /**
    * Style function for GeoJSON country boundaries
-   * Uses Four Color Theorem - each country gets a distinct color from the 4-color palette
-   * More visible fill so colors are clear, but still allows map terrain to show through
+   * Opaque pastel fills keyed by MAPCOLOR7 so neighbours always differ
    */
-  const countryStyle = (feature?: GeoJSON.Feature) => {
-    if (!feature?.properties?.NAME) {
-      return {
-        fillColor: FOUR_COLORS[0],
-        fillOpacity: 0.6, // More visible - colors should be clear
-        color: '#666666', // Medium gray border for clear definition
-        weight: 1.2,
-        opacity: 0.6,
-      };
-    }
-
-    const countryName = feature.properties.NAME;
-    const fillColor = countryColorsRef.current.get(countryName) || FOUR_COLORS[0];
-
-    return {
-      fillColor,
-      fillOpacity: 0.6, // More visible fill - 4-color method should be clear
-      color: '#666666', // Medium gray border - clear but not overpowering
-      weight: 1.2, // Moderate border width
-      opacity: 0.9, // Clear borders
-    };
-  };
-
-  /**
-   * Disable interactive features on country polygons
-   */
-  const onEachCountry = (_feature: GeoJSON.Feature, layer: L.Layer) => {
-    // Disable all interactive features (no click, hover, tooltip)
-    if ('options' in layer && layer.options) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (layer.options as any).interactive = false;
-    }
-  };
+  const countryStyle = (feature?: GeoJSON.Feature) => ({
+    fillColor: COUNTRY_COLORS[feature?.properties?.MAPCOLOR7 as number] ?? COUNTRY_COLORS[1],
+    fillOpacity: 1,
+    color: '#5b6b7a', // Slate border - clear but not overpowering
+    weight: 0.9,
+    opacity: 0.85,
+    interactive: false,
+    smoothFactor: 1.5,
+  });
 
   /**
    * Style function for USA state boundaries
    * Subtle overlay - transparent fill with thin borders
    */
-  const usStateStyle = () => {
-    return {
-      fillColor: 'transparent',
-      fillOpacity: 0,
-      color: '#999999', // Lighter gray for state borders
-      weight: 0.8, // Thinner than country borders
-      opacity: 0.6, // More transparent - subtle state divisions
-    };
-  };
-
-  /**
-   * Disable interactive features on USA state polygons
-   */
-  const onEachUsState = (_feature: GeoJSON.Feature, layer: L.Layer) => {
-    // Disable all interactive features (no click, hover, tooltip)
-    if ('options' in layer && layer.options) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (layer.options as any).interactive = false;
-    }
-  };
+  const usStateStyle = () => ({
+    fillOpacity: 0,
+    color: '#8a97a3', // Lighter than country borders
+    weight: 0.6,
+    opacity: 0.7,
+    interactive: false,
+    smoothFactor: 1.5,
+  });
 
   // Max bounds to constrain map to show only one world instance (no horizontal wrapping)
   const maxBounds: L.LatLngBoundsExpression = [
-    [-90, -180], // Southwest coordinates
-    [90, 180], // Northeast coordinates
+    [-85, -180], // Southwest coordinates
+    [85, 180], // Northeast coordinates
   ];
+
+  const distanceLabelPosition =
+    distance !== undefined && displayPinPosition && targetLocation
+      ? greatCircleMidpoint(displayPinPosition, targetLocation)
+      : null;
 
   return (
     <MapContainer
@@ -778,56 +669,79 @@ export default function InteractiveMap({
       maxZoom={10}
       maxBounds={maxBounds}
       maxBoundsViscosity={1.0}
-      className={`${className} bg-[#7BB5E8]`}
-      style={{ backgroundColor: '#7BB5E8' }}
+      worldCopyJump={false}
+      className={`${className} geoquest-map`}
+      style={{ backgroundColor: OCEAN_COLOR }}
       zoomControl={false}
       preferCanvas={true}
       zoomAnimation={true}
       fadeAnimation={true}
       markerZoomAnimation={true}
       scrollWheelZoom={true}
-      zoomSnap={0.25}
-      zoomDelta={0.25}
+      zoomSnap={0.5}
+      zoomDelta={0.5}
       wheelPxPerZoomLevel={120}
     >
       {/* Initialize custom panes for proper z-index layering */}
       <MapPaneInitializer />
+      <WorldFitController />
+      <DetailWatcher onChange={setDetail} />
 
-      {/* Base map tiles with low opacity to show real geography (islands, coastlines, etc.) */}
-      <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        opacity={0.85}
-        className="map-tiles"
+      {/* Faint lat/lng grid on the ocean */}
+      <Polyline
+        positions={GRATICULE}
+        pathOptions={{ color: '#ffffff', weight: 1, opacity: 0.25, interactive: false }}
+        pane="gratPane"
       />
 
-      {/* Country boundaries with 4-color method - render in countriesPane so fill is visible */}
+      {/* Country fills - fully vector, no labels, works offline */}
       {countriesData && (
         <GeoJSON
-          key="countries"
+          key={`countries-${shownDetail}`}
           data={countriesData}
           style={countryStyle}
-          onEachFeature={onEachCountry}
           pane="countriesPane"
+          attribution={RELIEF_ENABLED ? undefined : 'Borders &copy; <a href="https://www.naturalearthdata.com">Natural Earth</a>'}
         />
       )}
 
-      {/* USA state boundaries - borders only, render in statesPane below countries */}
-      {/* States have fillOpacity: 0 and lower z-index so USA country color shows through */}
-      {usStatesData && (
+      {/* Terrain relief multiplied over the country fills (mountains, deserts, river valleys) */}
+      {RELIEF_ENABLED && (
+        <TileLayer
+          url={RELIEF_URL}
+          pane="reliefPane"
+          opacity={0.55}
+          maxNativeZoom={13}
+          bounds={maxBounds}
+          noWrap
+          attribution='Relief &copy; <a href="https://www.esri.com">Esri</a> | Borders &copy; <a href="https://www.naturalearthdata.com">Natural Earth</a>'
+        />
+      )}
+
+      {/* USA state boundaries - borders only */}
+      {usStatesData && detail !== 'low' && (
+        <GeoJSON key="us-states" data={usStatesData} style={usStateStyle} pane="statesPane" />
+      )}
+
+      {/* Target country outline - fades in with the distance line */}
+      {targetCountry && showLine && (
         <GeoJSON
-          key="us-states"
-          data={usStatesData}
-          style={usStateStyle}
-          onEachFeature={onEachUsState}
-          pane="statesPane"
+          key={`target-${targetCountry.properties?.NAME}`}
+          data={targetCountry}
+          style={{
+            fillColor: '#C8553D',
+            fillOpacity: 0.16 * lineOpacity,
+            color: '#A8432E',
+            weight: 2.5,
+            opacity: lineOpacity,
+            interactive: false,
+          }}
+          pane="highlightPane"
         />
       )}
 
       {/* Map click handler for pin placement - disabled when showing results */}
       <MapClickHandler onMapClick={handleMapClick} disabled={!!targetLocation || showLine} />
-
-      {/* Map remains interactive during results - users can pan/zoom to explore */}
 
       {/* Map zoom handler for results view */}
       <MapZoomHandler
@@ -838,46 +752,21 @@ export default function InteractiveMap({
         playerGuesses={playerGuesses}
       />
 
-      {/* Line connecting guess to target - Render behind pins using overlayPane (z-index 400) */}
-      {/* Line appears immediately when showLine is true, visible during entire zoom animation */}
-      {/* Canvas renderer with increased padding prevents pixelation during zoom */}
-      {showLine && displayPinPosition && targetLocation && (
-        <>
-          <Polyline
-            positions={[
-              [displayPinPosition.lat, displayPinPosition.lng],
-              [targetLocation.lat, targetLocation.lng],
-            ]}
-            pathOptions={{
-              color: '#ef4444', // Solid red (red-500)
-              weight: 4,
-              opacity: lineOpacity,
-              dashArray: '10, 8',
-              lineCap: 'round',
-              lineJoin: 'round',
-              fill: false,
-              fillOpacity: 0,
-            }}
-            pane="linesPane"
-          />
-        </>
+      {/* Great-circle line from guess to target, behind pins */}
+      {guessArc && (
+        <Polyline
+          positions={guessArc}
+          pathOptions={resultLineOptions('#C8553D', lineOpacity)} // Compass red
+          pane="linesPane"
+        />
       )}
 
-      {/* Distance label at midpoint of line - renders on top using tooltipPane */}
-      {distance !== undefined && (
+      {/* Distance label at the midpoint of the arc */}
+      {distanceLabelPosition && distance !== undefined && (
         <Marker
-          position={[
-            (displayPinPosition.lat + targetLocation.lat) / 2,
-            (displayPinPosition.lng + targetLocation.lng) / 2,
-          ]}
-          icon={
-            new L.DivIcon({
-              html: `<div class="distance-label" style="opacity: ${lineOpacity}">${distance.toLocaleString('en-US')} km</div>`,
-              className: 'distance-label-container',
-              iconSize: [120, 30],
-              iconAnchor: [60, 15],
-            })
-          }
+          position={[distanceLabelPosition.lat, distanceLabelPosition.lng]}
+          interactive={false}
+          icon={distanceLabelIcon(distance, lineOpacity)}
           pane="tooltipPane"
         />
       )}
@@ -887,7 +776,7 @@ export default function InteractiveMap({
         <Marker
           position={[displayPinPosition.lat, displayPinPosition.lng]}
           icon={customPinIcon}
-          draggable={!guessLocation} // Only draggable if not using external guess location
+          draggable={!guessLocation && !targetLocation} // Only draggable while guessing
           eventHandlers={{
             dragend: handleMarkerDragEnd,
           }}
@@ -895,32 +784,30 @@ export default function InteractiveMap({
         />
       )}
 
-      {/* Multiplayer: Render player distance lines (behind pins) */}
-      {/* Lines appear immediately, visible during entire zoom animation */}
-      {/* Lines render behind pins using custom linesPane (z-index 400) */}
-      {playerGuesses && targetLocation && showLine && playerGuesses.map((playerGuess) => (
+      {/* Multiplayer: same lines as single player, one per player in their colour (behind pins) */}
+      {playerArcs.map(pa => (
         <Polyline
-          key={`line-${playerGuess.playerId}`}
-          positions={[
-            [playerGuess.guess.lat, playerGuess.guess.lng],
-            [targetLocation.lat, targetLocation.lng],
-          ]}
-          pathOptions={{
-            color: playerGuess.color,
-            weight: 3,
-            opacity: lineOpacity * 0.7,
-            dashArray: '10, 8',
-            lineCap: 'round',
-            lineJoin: 'round',
-            fill: false,
-            fillOpacity: 0,
-          }}
+          key={`line-${pa.playerId}`}
+          positions={pa.arc}
+          pathOptions={resultLineOptions(pa.color, lineOpacity)}
           pane="linesPane"
         />
       ))}
 
+      {/* Multiplayer: distance label at the midpoint of each player's line */}
+      {playerArcs.map(pa =>
+        pa.distance !== undefined ? (
+          <Marker
+            key={`dist-${pa.playerId}`}
+            position={[pa.mid.lat, pa.mid.lng]}
+            interactive={false}
+            icon={distanceLabelIcon(pa.distance, lineOpacity, pa.color)}
+            pane="tooltipPane"
+          />
+        ) : null
+      )}
+
       {/* Multiplayer: Render player pins (above lines) */}
-      {/* Pins render on top using markerPane (z-index 600) */}
       {playerGuesses && playerGuesses.map((playerGuess) => (
         <Marker
           key={`pin-${playerGuess.playerId}`}
@@ -933,10 +820,11 @@ export default function InteractiveMap({
             permanent
             direction="top"
             offset={[0, -50]}
-            className="!bg-black !border-gray-600 !rounded-lg before:!hidden"
-            opacity={0.9}
+            className="atlas-tooltip"
+            opacity={1}
           >
-            <div className="text-xs sm:text-sm font-bold px-2 py-1" style={{ color: playerGuess.color }}>
+            <div className="flex items-center gap-1.5 px-2 py-1 text-xs font-semibold text-ink sm:text-sm">
+              <span className="status-dot" style={{ backgroundColor: playerGuess.color }} />
               {playerGuess.playerName}
             </div>
           </Tooltip>
@@ -948,8 +836,8 @@ export default function InteractiveMap({
         <Marker position={[targetLocation.lat, targetLocation.lng]} icon={targetPinIcon} pane="markerPane">
           {/* Show city name label */}
           {cityName && (
-            <Tooltip permanent direction="top" offset={[0, -50]} className="!bg-black !border-orange-400 !rounded-lg before:!hidden" opacity={0.9}>
-              <div className="text-sm font-bold text-orange-400 px-3 py-1">
+            <Tooltip permanent direction="top" offset={[0, -50]} className="atlas-tooltip" opacity={1}>
+              <div className="px-3 py-1 font-display text-sm font-semibold text-compass-dark sm:text-base">
                 {cityName}
               </div>
             </Tooltip>

@@ -37,7 +37,7 @@ describe('MultiplayerGameComplete - Final Summary Enhancements', () => {
     }));
   };
 
-  it('applies gradient background matching MainMenu aesthetic', () => {
+  it('renders on the shared atlas screen like the other menus', () => {
     const finalStandings = createMockStandings(3);
     const winner: PlayerStanding = {
       playerId: 'player-1',
@@ -64,12 +64,9 @@ describe('MultiplayerGameComplete - Final Summary Enhancements', () => {
       />
     );
 
-    // Check for gradient background classes
-    const backgroundElement = container.querySelector('.bg-gradient-to-br');
-    expect(backgroundElement).toBeInTheDocument();
-    expect(backgroundElement).toHaveClass('from-slate-900');
-    expect(backgroundElement).toHaveClass('via-blue-950');
-    expect(backgroundElement).toHaveClass('to-slate-900');
+    // Shared atlas screen: decorative world backdrop + paper card
+    expect(container.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
+    expect(container.querySelector('.atlas-card')).toBeInTheDocument();
   });
 
   it('triggers confetti for winner only after 1 second delay', () => {
@@ -179,16 +176,12 @@ describe('MultiplayerGameComplete - Final Summary Enhancements', () => {
       />
     );
 
-    // Check for primary text color (text-white) on player names
-    const playerNames = container.querySelectorAll('.text-white');
-    expect(playerNames.length).toBeGreaterThan(0);
-
-    // Check for secondary text color (text-gray-300) on labels
-    const secondaryText = container.querySelectorAll('.text-gray-300');
-    expect(secondaryText.length).toBeGreaterThan(0);
+    // Primary ink on player names and scores, softer ink on labels
+    expect(container.querySelectorAll('.text-ink').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('.text-ink-soft').length).toBeGreaterThan(0);
   });
 
-  it('uses semi-transparent card backgrounds with backdrop blur', () => {
+  it('renders standings inside the paper card', () => {
     const finalStandings = createMockStandings(3);
     const winner: PlayerStanding = {
       playerId: 'player-1',
@@ -215,13 +208,12 @@ describe('MultiplayerGameComplete - Final Summary Enhancements', () => {
       />
     );
 
-    // Check for semi-transparent background and backdrop blur on main card
-    const cardElement = container.querySelector('.bg-slate-800\\/50');
-    expect(cardElement).toBeInTheDocument();
-    expect(cardElement).toHaveClass('backdrop-blur-sm');
+    const card = container.querySelector('.atlas-card');
+    expect(card).toBeInTheDocument();
+    expect(card?.textContent).toContain('Alice');
   });
 
-  it('includes animated orbs in background', () => {
+  it('includes the drifting world map backdrop', () => {
     const finalStandings = createMockStandings(3);
     const winner: PlayerStanding = {
       playerId: 'player-1',
@@ -248,12 +240,12 @@ describe('MultiplayerGameComplete - Final Summary Enhancements', () => {
       />
     );
 
-    // Check for animated floating orbs
-    const floatingOrbs = container.querySelectorAll('.animate-float');
-    expect(floatingOrbs.length).toBeGreaterThanOrEqual(3); // At least 3 orbs
+    // Backdrop is purely decorative
+    const backdrop = container.querySelector('[aria-hidden="true"]');
+    expect(backdrop).toBeInTheDocument();
   });
 
-  it('applies success color (text-green-400) to winner text', () => {
+  it('highlights the winner in brass', () => {
     const finalStandings = createMockStandings(3);
     const winner: PlayerStanding = {
       playerId: 'player-1',
@@ -280,9 +272,8 @@ describe('MultiplayerGameComplete - Final Summary Enhancements', () => {
       />
     );
 
-    // Check for success color on winner-related elements (winner name should be green)
-    const successText = container.querySelectorAll('.text-green-400');
-    expect(successText.length).toBeGreaterThan(0);
+    // Winner's card and score use the brass (gold) accent
+    expect(container.querySelectorAll('.text-brass, .border-brass').length).toBeGreaterThan(0);
   });
 
   it('cleans up confetti animation on component unmount', () => {

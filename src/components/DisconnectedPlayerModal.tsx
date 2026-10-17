@@ -29,47 +29,39 @@ export default function DisconnectedPlayerModal({
   const isAlone = remainingPlayersCount === 1;
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-      <div className="bg-dark-elevated rounded-2xl shadow-2xl max-w-md w-full p-8 animate-slide-up border border-red-500/50">
+    <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+      <div className="atlas-card max-w-sm w-full p-6 animate-slide-up text-center">
         {/* Icon */}
-        <div className="text-center mb-6">
-          <div className="text-6xl mb-3">⚠️</div>
-          <h2 className="text-3xl font-bold text-white mb-2">Player Disconnected</h2>
-        </div>
+        <div className="text-5xl mb-2">⚠️</div>
+        <h2 className="font-display text-2xl sm:text-3xl font-bold text-ink mb-3">Player Disconnected</h2>
 
         {/* Message */}
-        <div className="bg-dark-card rounded-lg p-4 mb-6">
+        <div className="rounded-xl border border-paper-line bg-paper-deep/60 p-4 mb-5">
           {isAlone ? (
-            <p className="text-lg text-gray-300 text-center">
-              <span className="font-semibold text-red-400">{playerName}</span> has disconnected.
+            <p className="text-base text-ink-soft">
+              <span className="font-semibold text-compass-dark">{playerName}</span> has disconnected.
               <br />
-              <span className="text-sm text-gray-400 mt-2 block">
+              <span className="text-sm text-ink-faint mt-2 block">
                 You are the only player remaining in the room.
               </span>
             </p>
           ) : (
-            <p className="text-lg text-gray-300 text-center">
-              <span className="font-semibold text-red-400">{playerName}</span> has disconnected from
+            <p className="text-base text-ink-soft">
+              <span className="font-semibold text-compass-dark">{playerName}</span> has disconnected from
               the game.
             </p>
           )}
         </div>
 
         {/* Buttons */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           {!isAlone && (
-            <button
-              onClick={onClose}
-              className="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 min-h-[44px] text-lg"
-            >
+            <button onClick={onClose} className="btn btn-primary btn-block">
               Continue Playing
             </button>
           )}
           {onLeaveRoom && (
-            <button
-              onClick={onLeaveRoom}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 min-h-[44px] text-lg"
-            >
+            <button onClick={onLeaveRoom} className={`btn btn-block ${isAlone ? 'btn-accent' : 'btn-danger'}`}>
               {isAlone ? 'Back to Main Menu' : 'Leave Room'}
             </button>
           )}

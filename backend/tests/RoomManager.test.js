@@ -409,3 +409,17 @@ describe('RoomManager', () => {
     });
   });
 });
+
+describe('RoomManager joinRoom idempotency', () => {
+  it('does not add the same socket to a room twice', async () => {
+    const { RoomManager } = await import('../services/RoomManager.js');
+    const manager = new RoomManager();
+    const room = manager.createRoom('Host', 'host-socket', 5);
+    manager.joinRoom(room.code, 'Guest', 'guest-socket');
+    // A repeated or stale reconnect request from either player
+    manager.joinRoom(room.code, 'Host', 'host-socket');
+    manager.joinRoom(room.code, 'Guest', 'guest-socket');
+    expect(room.players.map((p) => p.id)).toEqual(['host-socket', 'guest-socket']);
+    manager.destroy();
+  });
+});

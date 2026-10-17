@@ -1,11 +1,11 @@
 /**
- * Represents a city location with geographic coordinates and difficulty tier.
+ * Represents a city location with geographic coordinates and difficulty.
  */
 export interface City {
   /** The name of the city */
   name: string;
 
-  /** The country where the city is located */
+  /** The country where the city is located (always shown to the player) */
   country: string;
 
   /** Latitude coordinate in decimal degrees */
@@ -14,11 +14,12 @@ export interface City {
   /** Longitude coordinate in decimal degrees */
   longitude: number;
 
+  /** Difficulty level 1-10 (1 = famous and easy to place, 10 = obscure) */
+  level: number;
+
   /**
-   * Difficulty tier for level progression
-   * Tier 1: Well-known major cities (easier)
-   * Tier 2: Moderately known cities (medium difficulty)
-   * Tier 3: Lesser-known cities (harder)
+   * Score decay distance in km, proportional to the size of the city's country.
+   * See calculateScore in utils/scoring.ts.
    */
-  tier: number;
+  scaleKm: number;
 }

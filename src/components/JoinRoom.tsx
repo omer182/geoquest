@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSocket } from '../hooks/useSocket';
 import { useGame } from '../context/GameContext';
 import { SOCKET_EVENTS } from '../types/socket-events';
+import AtlasScreen, { AtlasHeading } from './ui/AtlasScreen';
 
 interface JoinRoomProps {
   onRoomJoined: () => void;
@@ -103,59 +104,41 @@ export default function JoinRoom({ onRoomJoined, onBack }: JoinRoomProps) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white p-4 relative overflow-hidden">
-      {/* Enhanced gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-950/20 to-transparent pointer-events-none" />
+    <AtlasScreen>
+      <AtlasHeading eyebrow="Online Battle" title="Join Room" subtitle="Enter a room code to join a game" />
 
-      {/* Animated orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }} />
-      </div>
-
-      <div className="w-full max-w-[280px] sm:max-w-[320px] space-y-3 sm:space-y-4 relative z-10">
-        {/* Header */}
-        <div className="text-center mb-4">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-1 text-primary">Join Room</h2>
-          <p className="text-gray-400 text-sm sm:text-base">Enter a room code to join a game</p>
-        </div>
-
+      <div className="atlas-card space-y-4 p-5">
         {/* Connection Status */}
         {socketState.connectionStatus !== 'connected' && (
-          <div className="bg-yellow-900/30 border border-yellow-500 rounded-lg p-3 text-center">
-            <p className="text-yellow-400 text-sm">Connecting to server...</p>
-          </div>
+          <div className="atlas-notice atlas-notice-warn">Connecting to server...</div>
         )}
 
         {/* Error Message */}
-        {error && (
-          <div className="bg-red-900/30 border border-red-500 rounded-lg p-3 text-center">
-            <p className="text-red-400 text-sm">{error}</p>
-          </div>
-        )}
+        {error && <div className="atlas-notice atlas-notice-error">{error}</div>}
 
-        {/* Room Code Input */}
-        <div className="space-y-2">
-          <label htmlFor="roomCode" className="block text-sm font-semibold text-gray-300">
+        {/* Room Code Input - styled like a ticket stub */}
+        <div>
+          <label htmlFor="roomCode" className="atlas-label">
             Room Code
           </label>
           <input
             id="roomCode"
             type="text"
+            inputMode="numeric"
             value={roomCode}
             onChange={(e) => handleRoomCodeChange(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="12345"
             maxLength={5}
             disabled={isJoining}
-            className="w-full px-4 py-3 bg-dark-elevated text-white text-2xl text-center tracking-widest rounded-lg border-2 border-dark-card focus:border-primary focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-mono"
+            className="atlas-input border-dashed text-center font-mono text-3xl font-bold tracking-[0.4em]"
           />
-          <p className="text-xs text-gray-500 text-center">5-digit code</p>
+          <p className="mt-1 text-center text-xs text-ink-faint">5-digit code</p>
         </div>
 
         {/* Player Name Input */}
-        <div className="space-y-2">
-          <label htmlFor="playerName" className="block text-sm font-semibold text-gray-300">
+        <div>
+          <label htmlFor="playerName" className="atlas-label">
             Your Name
           </label>
           <input
@@ -167,12 +150,12 @@ export default function JoinRoom({ onRoomJoined, onBack }: JoinRoomProps) {
             placeholder="Enter your name"
             maxLength={20}
             disabled={isJoining}
-            className="w-full px-4 py-3 bg-dark-elevated text-white rounded-lg border-2 border-dark-card focus:border-primary focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="atlas-input"
           />
         </div>
 
         {/* Action Buttons */}
-        <div className="space-y-3 mt-4">
+        <div className="space-y-2">
           <button
             onClick={handleJoinRoom}
             disabled={
@@ -181,20 +164,16 @@ export default function JoinRoom({ onRoomJoined, onBack }: JoinRoomProps) {
               !roomCode.trim() ||
               socketState.connectionStatus !== 'connected'
             }
-            className="w-full py-3 px-4 bg-primary hover:bg-primary-dark text-white font-bold text-base rounded-lg transition-colors duration-200 shadow-lg hover:shadow-primary/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary"
+            className="btn btn-primary btn-block"
           >
             {isJoining ? 'Joining Room...' : 'Join Room'}
           </button>
 
-          <button
-            onClick={onBack}
-            disabled={isJoining}
-            className="w-full py-2.5 px-4 bg-dark-card hover:bg-dark-elevated text-gray-300 font-semibold text-sm rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+          <button onClick={onBack} disabled={isJoining} className="btn btn-ghost btn-block text-sm">
             Back
           </button>
         </div>
       </div>
-    </div>
+    </AtlasScreen>
   );
 }

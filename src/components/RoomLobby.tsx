@@ -6,6 +6,7 @@ import { SOCKET_EVENTS } from '../types/socket-events';
 import { Room } from '../types/socket-events';
 import { DifficultyLevel } from '../types/game';
 import { City } from '../types/city';
+import AtlasScreen, { AtlasHeading } from './ui/AtlasScreen';
 
 interface RoomLobbyProps {
   onGameStart: () => void;
@@ -22,6 +23,8 @@ export default function RoomLobby({ onGameStart, onLeave }: RoomLobbyProps) {
   const { state: gameState, dispatch } = useGame();
   const [isCopied, setIsCopied] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [difficulty, setDifficulty] = useState<DifficultyLevel>('medium');
+  const [timerDuration, setTimerDuration] = useState<number>(30);
 
   const currentRoom = gameState.currentRoom;
   const currentPlayer = gameState.currentPlayer;
@@ -33,40 +36,43 @@ export default function RoomLobby({ onGameStart, onLeave }: RoomLobbyProps) {
 
     // Check if we just reconnected (socket is connected but we have a previous socket ID stored)
     const previousSocketId = sessionStorage.getItem('previous_socket_id');
+    if (!previousSocketId || socketState.connectionStatus !== 'connected') return;
 
-    if (previousSocketId && socketState.connectionStatus === 'connected') {
-      console.log('[RoomLobby] Detected reconnection, attempting to rejoin room', {
+    // Consume the stored ID up front so this effect can't fire the rejoin twice
+    sessionStorage.removeItem('previous_socket_id');
+
+    // Stale ID (e.g. from an earlier connection): we're already in this room
+    // under the current socket, so there is nothing to restore
+    if (previousSocketId === socket.id || currentPlayer.id === socket.id) return;
+
+    console.log('[RoomLobby] Detected reconnection, attempting to rejoin room', {
+      roomCode: currentRoom.code,
+      previousSocketId,
+      newSocketId: socket.id
+    });
+
+    // Rejoin the room with previous socket ID for session restoration
+    socket.emit(
+      SOCKET_EVENTS.JOIN_ROOM,
+      {
         roomCode: currentRoom.code,
-        previousSocketId,
-        newSocketId: socket.id
-      });
+        playerName: currentPlayer.name,
+        previousSocketId: previousSocketId,
+      },
+      (response: any) => {
+        if (response.success) {
+          console.log('[RoomLobby] Successfully rejoined room after reconnection', response.data);
 
-      // Rejoin the room with previous socket ID for session restoration
-      socket.emit(
-        SOCKET_EVENTS.JOIN_ROOM,
-        {
-          roomCode: currentRoom.code,
-          playerName: currentPlayer.name,
-          previousSocketId: previousSocketId,
-        },
-        (response: any) => {
-          if (response.success) {
-            console.log('[RoomLobby] Successfully rejoined room after reconnection', response.data);
-
-            // Update local state with rejoined room
-            dispatch({
-              type: 'UPDATE_ROOM',
-              payload: { room: response.data.room },
-            });
-
-            // Clear the previous socket ID since we've successfully rejoined
-            sessionStorage.removeItem('previous_socket_id');
-          } else {
-            console.error('[RoomLobby] Failed to rejoin room:', response.error);
-          }
+          // Update local state with rejoined room
+          dispatch({
+            type: 'UPDATE_ROOM',
+            payload: { room: response.data.room },
+          });
+        } else {
+          console.error('[RoomLobby] Failed to rejoin room:', response.error);
         }
-      );
-    }
+      }
+    );
   }, [socketState.connectionStatus, socket, currentRoom, currentPlayer, dispatch]);
 
   // Listen for room updates
@@ -228,7 +234,7 @@ export default function RoomLobby({ onGameStart, onLeave }: RoomLobbyProps) {
     // Emit game start event to server with timerDuration
     socket.emit(
       SOCKET_EVENTS.GAME_START,
-      { roomCode: currentRoom.code, difficulty: 'medium', timerDuration: 30 },
+      { roomCode: currentRoom.code, difficulty, timerDuration },
       (response) => {
         if (response.success) {
           // Server will broadcast game:started to all players
@@ -248,112 +254,101 @@ export default function RoomLobby({ onGameStart, onLeave }: RoomLobbyProps) {
 
   if (!currentRoom || !currentPlayer) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white">
-        <p className="text-sm sm:text-base text-gray-300">Loading room...</p>
-      </div>
+      <AtlasScreen>
+        <p className="text-center text-sm text-ink-soft">Loading room...</p>
+      </AtlasScreen>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white p-2 sm:p-4 relative overflow-hidden">
-      {/* Enhanced gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-950/20 to-transparent pointer-events-none" />
+    <AtlasScreen widthClass="max-w-[380px]">
+      <AtlasHeading eyebrow="Base camp" title="Room Lobby" subtitle="Waiting for players to ready up" />
 
-      {/* Animated orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }} />
-      </div>
-
-      <div className="w-full max-w-[280px] sm:max-w-sm space-y-2.5 sm:space-y-4 relative z-10">
-        {/* Header */}
-        <div className="text-center mb-3 sm:mb-4 animate-fade-in-up">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 text-white tracking-tight">Room Lobby</h2>
-          <p className="text-gray-300 text-xs sm:text-sm">Waiting for players to ready up</p>
-        </div>
-
-        {/* Room Code Card */}
-        <div className="bg-dark-elevated/80 backdrop-blur-sm rounded-xl p-2.5 sm:p-4 border border-primary/30 shadow-glow-sm">
-          <p className="text-[10px] sm:text-xs text-gray-400 mb-1.5 sm:mb-2 text-center">Room Code</p>
-          <div className="flex items-center justify-center gap-2 sm:gap-4">
-            <p className="text-xl sm:text-2xl md:text-3xl font-bold font-mono tracking-widest text-primary">
-              {currentRoom.code}
-            </p>
-            <button
-              onClick={handleCopyRoomCode}
-              className="px-3 sm:px-4 py-1.5 sm:py-2 bg-dark-card hover:bg-dark-bg text-white rounded-lg transition-colors text-xs sm:text-sm min-h-[44px]"
-            >
+      <div className="atlas-card space-y-4 p-4 sm:p-5">
+        {/* Room Code - ticket stub */}
+        <div className="rounded-xl border border-dashed border-paper-edge bg-paper-deep/60 p-3 text-center">
+          <p className="atlas-eyebrow">Room Code</p>
+          <div className="mt-1 flex items-center justify-center gap-3">
+            <p className="font-mono text-3xl font-bold tracking-[0.3em] text-ink">{currentRoom.code}</p>
+            <button onClick={handleCopyRoomCode} className="btn btn-secondary px-3 py-1.5 text-sm">
               {isCopied ? 'Copied!' : 'Copy Link'}
             </button>
           </div>
-          <p className="text-[10px] sm:text-xs text-gray-400 mt-1.5 sm:mt-2 text-center">
-            Share this link with your friend
-          </p>
+          <p className="mt-1 text-xs text-ink-faint">Share this link with your friend</p>
         </div>
 
         {/* Players List */}
-        <div className="bg-dark-elevated/80 backdrop-blur-sm rounded-xl p-2.5 sm:p-4 border border-gray-700/50">
-          <h3 className="text-sm sm:text-base md:text-lg font-semibold mb-2 sm:mb-3 text-white">
+        <div>
+          <h3 className="mb-2 flex items-baseline justify-between font-display text-lg font-semibold text-ink">
             Players ({currentRoom.players.length}/{currentRoom.maxPlayers})
           </h3>
-          <div className="space-y-1.5 sm:space-y-2 max-h-[240px] overflow-y-auto">
+          <ul className="max-h-[240px] space-y-1.5 overflow-y-auto">
             {currentRoom.players.map((player) => (
-              <div
+              <li
                 key={player.id}
-                className="flex items-center justify-between p-2 sm:p-3 bg-dark-card rounded-lg"
+                className={`flex items-center justify-between rounded-xl border px-3 py-2.5 ${
+                  player.id === currentPlayer.id ? 'border-sea-deep/30 bg-sea/15' : 'border-paper-line bg-white/50'
+                }`}
               >
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <div
-                    className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0 ${
-                      player.isReady ? 'bg-green-500' : 'bg-gray-500'
-                    }`}
-                  />
-                  <span className="font-semibold text-xs sm:text-sm text-white truncate">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <span className={`status-dot ${player.isReady ? 'bg-moss' : 'bg-ink-faint/50'}`} />
+                  <span className="truncate text-sm font-semibold text-ink">
                     {player.name}
                     {player.isHost && (
-                      <span className="ml-1.5 text-[10px] sm:text-xs bg-primary text-dark-bg px-1.5 py-0.5 rounded">
+                      <span className="ml-1.5 rounded bg-brass px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-white">
                         HOST
                       </span>
                     )}
                     {player.id === currentPlayer.id && (
-                      <span className="ml-1.5 text-[10px] sm:text-xs text-gray-400">(You)</span>
+                      <span className="ml-1.5 text-xs font-normal text-ink-faint">(You)</span>
                     )}
                   </span>
                 </div>
-                <span className={`text-xs sm:text-sm flex-shrink-0 ml-2 ${player.isReady ? 'text-green-400' : 'text-gray-400'}`}>
+                <span
+                  className={`ml-2 flex-shrink-0 text-xs font-semibold ${player.isReady ? 'text-moss' : 'text-ink-faint'}`}
+                >
                   {player.isReady ? 'Ready' : 'Not Ready'}
                 </span>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
 
         {/* Host Controls */}
         {isHost && (
-          <div className="bg-dark-elevated/80 backdrop-blur-sm rounded-xl p-2.5 sm:p-4 border border-gray-700/50">
-            <h3 className="text-sm sm:text-base md:text-lg font-semibold mb-2 sm:mb-3 text-white">Host Controls</h3>
-            <div className="space-y-2 sm:space-y-3">
-              {/* Host Ready Button */}
-              <button
-                onClick={handleToggleReady}
-                className={`w-full py-2.5 sm:py-3 px-3 sm:px-4 font-semibold text-sm sm:text-base rounded-lg transition-all duration-200 shadow-lg transform hover:scale-[1.02] active:scale-[0.98] min-h-[44px] ${
-                  currentPlayer.isReady
-                    ? 'bg-gray-600 hover:bg-gray-700 text-white'
-                    : 'bg-primary hover:bg-primary-dark text-white'
-                }`}
-              >
-                {currentPlayer.isReady ? 'Cancel Ready' : 'Ready Up'}
-              </button>
+          <div className="space-y-2 border-t border-paper-line pt-4">
+            <h3 className="atlas-eyebrow">Host Controls</h3>
 
-              {/* Start Game Button */}
-              <button
-                onClick={handleStartGame}
-                disabled={!canStartGame()}
-                className="w-full py-2.5 sm:py-3 px-3 sm:px-4 bg-accent hover:bg-accent-dark text-white font-bold text-sm sm:text-base rounded-lg transition-all duration-200 shadow-lg hover:shadow-glow-sm transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 min-h-[44px]"
-              >
-                Start Game
-              </button>
-            </div>
+            {/* Game settings */}
+            <SegmentedControl<DifficultyLevel>
+              label="Difficulty"
+              value={difficulty}
+              onChange={setDifficulty}
+              options={[
+                { value: 'easy', label: 'Easy', hint: 'Famous cities (levels 1-3)' },
+                { value: 'medium', label: 'Medium', hint: 'Well-known cities (levels 4-7)' },
+                { value: 'hard', label: 'Hard', hint: 'Obscure cities (levels 8-10)' },
+              ]}
+            />
+            <SegmentedControl<number>
+              label="Time per round"
+              value={timerDuration}
+              onChange={setTimerDuration}
+              options={[15, 30, 45, 60].map((s) => ({ value: s, label: `${s}s` }))}
+            />
+
+            {/* Host Ready Button */}
+            <button
+              onClick={handleToggleReady}
+              className={`btn btn-block ${currentPlayer.isReady ? 'btn-secondary' : 'btn-primary'}`}
+            >
+              {currentPlayer.isReady ? 'Cancel Ready' : 'Ready Up'}
+            </button>
+
+            {/* Start Game Button */}
+            <button onClick={handleStartGame} disabled={!canStartGame()} className="btn btn-accent btn-block">
+              Start Game
+            </button>
           </div>
         )}
 
@@ -361,11 +356,7 @@ export default function RoomLobby({ onGameStart, onLeave }: RoomLobbyProps) {
         {!isHost && (
           <button
             onClick={handleToggleReady}
-            className={`w-full py-2.5 sm:py-3 px-3 sm:px-4 font-bold text-sm sm:text-base rounded-lg transition-all duration-200 shadow-lg transform hover:scale-[1.02] active:scale-[0.98] min-h-[44px] ${
-              currentPlayer.isReady
-                ? 'bg-gray-600 hover:bg-gray-700 text-white'
-                : 'bg-primary hover:bg-primary-dark text-white hover:shadow-glow-sm'
-            }`}
+            className={`btn btn-block ${currentPlayer.isReady ? 'btn-secondary' : 'btn-success'}`}
           >
             {currentPlayer.isReady ? 'Cancel Ready' : 'Ready Up'}
           </button>
@@ -373,35 +364,73 @@ export default function RoomLobby({ onGameStart, onLeave }: RoomLobbyProps) {
 
         {/* Leave Room Button */}
         {!showLeaveConfirm ? (
-          <button
-            onClick={() => setShowLeaveConfirm(true)}
-            className="w-full py-2.5 sm:py-3 px-3 sm:px-4 bg-transparent hover:bg-red-900/30 text-red-400 hover:text-red-300 font-semibold text-sm sm:text-base rounded-lg transition-all duration-200 border border-red-700/50 hover:border-red-600 min-h-[44px]"
-          >
+          <button onClick={() => setShowLeaveConfirm(true)} className="btn btn-danger btn-block text-sm">
             Leave Room
           </button>
         ) : (
-          <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 bg-dark-elevated/80 backdrop-blur-sm rounded-xl border border-red-700/50">
-            <p className="text-center text-gray-300 text-xs sm:text-sm">
+          <div className="space-y-2 rounded-xl border border-compass/30 bg-compass/5 p-3">
+            <p className="text-center text-sm text-ink-soft">
               {isHost
                 ? 'Leaving will close the room for all players. Are you sure?'
                 : 'Are you sure you want to leave?'}
             </p>
-            <div className="grid grid-cols-2 gap-2 sm:gap-3">
-              <button
-                onClick={handleLeaveRoom}
-                className="py-2.5 sm:py-3 px-3 sm:px-4 bg-error hover:bg-error-dark text-white font-semibold text-xs sm:text-sm rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] min-h-[44px]"
-              >
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={handleLeaveRoom} className="btn btn-accent text-sm">
                 Yes, Leave
               </button>
-              <button
-                onClick={() => setShowLeaveConfirm(false)}
-                className="py-2.5 sm:py-3 px-3 sm:px-4 bg-transparent hover:bg-dark-elevated text-gray-300 hover:text-white font-semibold text-xs sm:text-sm rounded-xl transition-all duration-200 border border-gray-700 hover:border-gray-600 min-h-[44px]"
-              >
+              <button onClick={() => setShowLeaveConfirm(false)} className="btn btn-secondary text-sm">
                 Cancel
               </button>
             </div>
           </div>
         )}
+      </div>
+    </AtlasScreen>
+  );
+}
+
+interface SegmentedOption<T> {
+  value: T;
+  label: string;
+  hint?: string;
+}
+
+/**
+ * Small pill selector for host game settings.
+ */
+function SegmentedControl<T extends string | number>({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: T;
+  onChange: (value: T) => void;
+  options: SegmentedOption<T>[];
+}) {
+  const selected = options.find((o) => o.value === value);
+  return (
+    <div role="radiogroup" aria-label={label}>
+      <div className="mb-1 flex items-baseline justify-between">
+        <span className="text-xs font-semibold text-ink-soft">{label}</span>
+        {selected?.hint && <span className="text-[11px] text-ink-faint">{selected.hint}</span>}
+      </div>
+      <div className="flex gap-1 rounded-xl border border-paper-line bg-paper-deep/60 p-1">
+        {options.map((o) => (
+          <button
+            key={String(o.value)}
+            type="button"
+            role="radio"
+            aria-checked={o.value === value}
+            onClick={() => onChange(o.value)}
+            className={`min-h-[36px] flex-1 rounded-lg text-sm font-semibold transition-colors ${
+              o.value === value ? 'bg-ink text-paper shadow-sm' : 'text-ink-soft hover:bg-white/70'
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
       </div>
     </div>
   );

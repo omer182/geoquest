@@ -1,12 +1,19 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import MultiplayerRoundResults from '../MultiplayerRoundResults';
 import { PlayerRoundResult } from '../../types/game';
 
+// The Continue button emits over the socket, so the component needs useSocket
+vi.mock('../../hooks/useSocket', () => ({
+  useSocket: () => ({
+    state: { socket: { emit: vi.fn() }, isConnected: true },
+  }),
+}));
+
 describe('MultiplayerRoundResults - 5 Player Support', () => {
   const createMockResults = (numPlayers: number): PlayerRoundResult[] => {
     const names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'];
-    const scores = [5000, 4500, 4000, 3500, 3000];
+    const scores = [1500, 1400, 1300, 1200, 1100];
     const distances = [100, 150, 200, 250, 300];
 
     return Array.from({ length: numPlayers }, (_, i) => ({
@@ -14,6 +21,7 @@ describe('MultiplayerRoundResults - 5 Player Support', () => {
       playerName: names[i],
       distance: distances[i],
       score: scores[i],
+      totalScore: scores[i],
       guess: { lat: 0, lng: 0 },
     }));
   };
@@ -29,8 +37,9 @@ describe('MultiplayerRoundResults - 5 Player Support', () => {
         currentPlayerId="player-1"
         targetCityName="New York"
         countdown={5}
-        roundScore={5000}
-        totalScore={5000}
+        roundScore={1500}
+        totalScore={1500}
+        roomCode="ABC123"
       />
     );
 
@@ -57,8 +66,9 @@ describe('MultiplayerRoundResults - 5 Player Support', () => {
         currentPlayerId="player-3"
         targetCityName="London"
         countdown={null}
-        roundScore={4000}
-        totalScore={8000}
+        roundScore={1300}
+        totalScore={2600}
+        roomCode="ABC123"
       />
     );
 
@@ -66,13 +76,15 @@ describe('MultiplayerRoundResults - 5 Player Support', () => {
     expect(screen.getByText('(You)')).toBeInTheDocument();
   });
 
-  it('sorts players by score in descending order', () => {
+  it('sorts players by cumulative total score in descending order', () => {
+    // Ranking uses the running total, not this round's score: "Comeback" won the
+    // round but is still behind on total.
     const unsortedResults: PlayerRoundResult[] = [
-      { playerId: '1', playerName: 'Low Score', distance: 500, score: 1000, guess: { lat: 0, lng: 0 } },
-      { playerId: '2', playerName: 'High Score', distance: 50, score: 9000, guess: { lat: 0, lng: 0 } },
-      { playerId: '3', playerName: 'Mid Score', distance: 200, score: 5000, guess: { lat: 0, lng: 0 } },
-      { playerId: '4', playerName: 'Very Low', distance: 800, score: 500, guess: { lat: 0, lng: 0 } },
-      { playerId: '5', playerName: 'Medium', distance: 300, score: 4000, guess: { lat: 0, lng: 0 } },
+      { playerId: '1', playerName: 'Low Score', distance: 500, score: 700, totalScore: 2000, guess: { lat: 0, lng: 0 } },
+      { playerId: '2', playerName: 'High Score', distance: 50, score: 1400, totalScore: 5000, guess: { lat: 0, lng: 0 } },
+      { playerId: '3', playerName: 'Mid Score', distance: 200, score: 1000, totalScore: 4000, guess: { lat: 0, lng: 0 } },
+      { playerId: '4', playerName: 'Very Low', distance: 800, score: 300, totalScore: 1000, guess: { lat: 0, lng: 0 } },
+      { playerId: '5', playerName: 'Comeback', distance: 10, score: 1500, totalScore: 3000, guess: { lat: 0, lng: 0 } },
     ];
 
     const { container } = render(
@@ -83,8 +95,9 @@ describe('MultiplayerRoundResults - 5 Player Support', () => {
         currentPlayerId="1"
         targetCityName="Paris"
         countdown={null}
-        roundScore={1000}
-        totalScore={1000}
+        roundScore={700}
+        totalScore={2000}
+        roomCode="ABC123"
       />
     );
 
@@ -94,10 +107,10 @@ describe('MultiplayerRoundResults - 5 Player Support', () => {
       cell.textContent?.replace('👑', '').replace('(You)', '').trim()
     );
 
-    // Verify they are in score-descending order
+    // Verify they are in total-score-descending order
     expect(playerNames[0]).toBe('High Score');
     expect(playerNames[1]).toBe('Mid Score');
-    expect(playerNames[2]).toBe('Medium');
+    expect(playerNames[2]).toBe('Comeback');
     expect(playerNames[3]).toBe('Low Score');
     expect(playerNames[4]).toBe('Very Low');
   });
@@ -113,8 +126,9 @@ describe('MultiplayerRoundResults - 5 Player Support', () => {
         currentPlayerId="player-1"
         targetCityName="Tokyo"
         countdown={null}
-        roundScore={5000}
-        totalScore={5000}
+        roundScore={1500}
+        totalScore={1500}
+        roomCode="ABC123"
       />
     );
 

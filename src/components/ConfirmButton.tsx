@@ -39,11 +39,11 @@ export default function ConfirmButton({ onConfirm, disabled, isWaiting = false }
   return (
     <div className="fixed bottom-6 left-0 right-0 flex justify-center z-50 px-4 animate-slide-up">
       {isWaiting ? (
-        <div className="bg-dark-elevated/90 backdrop-blur-sm border-2 border-black/30 rounded-full px-6 py-3 shadow-lg min-h-[44px] flex items-center justify-center gap-3">
+        <div className="hud-card rounded-full px-6 py-3 min-h-[44px] flex items-center justify-center gap-3">
           {/* Loading spinner */}
-          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-compass border-t-transparent rounded-full animate-spin" />
           {/* Waiting text */}
-          <span className="text-white font-semibold text-lg">
+          <span className="text-ink font-semibold text-base">
             Waiting for other players...
           </span>
         </div>
@@ -51,10 +51,13 @@ export default function ConfirmButton({ onConfirm, disabled, isWaiting = false }
         <button
           onClick={onConfirm}
           disabled={disabled}
-          className="bg-gradient-to-r from-teal-600 to-blue-600 text-white font-bold py-3 px-8 rounded-full border-2 border-black/30 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 min-h-[44px] text-lg"
+          className="btn btn-accent rounded-full px-8 py-3 text-lg"
           aria-label="Confirm guess location"
         >
-          Confirm Guess
+          <span className="flex items-center gap-2">
+            Confirm Guess
+            <kbd className="kbd hidden sm:inline">Enter</kbd>
+          </span>
         </button>
       )}
     </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import MultiplayerRoundResults from './MultiplayerRoundResults';
 import { PlayerRoundResult } from '../types/game';
 
@@ -50,9 +50,14 @@ describe('MultiplayerRoundResults - 5 Player Support', () => {
     expect(screen.getByText('David')).toBeInTheDocument();
     expect(screen.getByText('Eve')).toBeInTheDocument();
 
-    // Check scores are displayed (with commas if > 1000)
-    expect(screen.getByText(/1,050/)).toBeInTheDocument();
-    expect(screen.getByText(/950/)).toBeInTheDocument();
+    // Each row shows distance, round score (base + time bonus) and running total,
+    // formatted with commas. Rows are ordered by running total.
+    const rows = screen.getAllByRole('row').slice(1); // skip header
+    const cells = (row: HTMLElement) =>
+      within(row).getAllByRole('cell').map(cell => cell.textContent?.trim());
+    expect(cells(rows[0])).toEqual(['👑Alice(You)', '50', '1,050', '1,050']);
+    expect(cells(rows[1])).toEqual(['Bob', '100', '930', '930']);
+    expect(cells(rows[4])).toEqual(['Eve', '500', '420', '420']);
   });
 
   it('displays crown emoji for winner (highest score)', () => {
