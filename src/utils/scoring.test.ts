@@ -1,125 +1,89 @@
 import { describe, it, expect } from 'vitest';
-import { calculateScore, getLevelThreshold } from './scoring';
+import {
+  calculateScore,
+  getLevelThreshold,
+  MAX_ROUND_SCORE,
+  MAX_LEVEL,
+  ROUNDS_PER_LEVEL,
+  PERFECT_RADIUS_KM,
+} from './scoring';
+import * as backendScoring from '../../backend/utils/scoring.js';
 
-describe('Scoring Algorithm (Geoguessr-style)', () => {
-  describe('distance thresholds', () => {
-    // Max score per round is 1500; anything beyond 1500 km scores 0.
-    it('should return 1500 points for perfect guess (0 km)', () => {
-      expect(calculateScore(0)).toBe(1500);
-    });
-
-    it('should return ~1500 points for very close guesses (< 150m)', () => {
-      expect(calculateScore(0.1)).toBe(1500);
-      expect(calculateScore(0.149)).toBe(1500);
-    });
-
-    it('should return high scores for close guesses (< 50km)', () => {
-      expect(calculateScore(1)).toBeGreaterThanOrEqual(1497);
-      expect(calculateScore(10)).toBeGreaterThan(1475);
-      expect(calculateScore(50)).toBeGreaterThan(1390);
-    });
-
-    it('should return moderate scores for medium distances (100-1000km)', () => {
-      expect(calculateScore(100)).toBeGreaterThan(1280);
-      expect(calculateScore(500)).toBeGreaterThan(710);
-      expect(calculateScore(1000)).toBeGreaterThan(340);
-    });
-
-    it('should return low scores near the 1500km cutoff', () => {
-      expect(calculateScore(1500)).toBeLessThan(200);
-      expect(calculateScore(1500)).toBeGreaterThan(0);
-    });
-
-    it('should return 0 points beyond 1500km', () => {
-      expect(calculateScore(1501)).toBe(0);
-      expect(calculateScore(5000)).toBe(0);
-      expect(calculateScore(20000)).toBe(0);
-    });
-
-    it('should never exceed 1500 points even with tier and level multipliers', () => {
-      expect(calculateScore(0, 3, 10)).toBe(1500);
-      expect(calculateScore(500, 2, 5)).toBe(1500);
-    });
-
-    it('should use exponential decay (closer guesses get exponentially more points)', () => {
-      const score1 = calculateScore(100);
-      const score2 = calculateScore(200);
-      const score3 = calculateScore(400);
-      
-      // Score should decrease exponentially, not linearly
-      const ratio1 = score1 / score2;
-      const ratio2 = score2 / score3;
-      
-      // Ratios should be similar (exponential decay)
-      expect(Math.abs(ratio1 - ratio2)).toBeLessThan(0.5);
-    });
+describe('calculateScore', () => {
+  it('awards the maximum within the perfect radius', () => {
+    expect(calculateScore(0, 300)).toBe(MAX_ROUND_SCORE);
+    expect(calculateScore(PERFECT_RADIUS_KM, 300)).toBe(MAX_ROUND_SCORE);
   });
 
-  describe('function properties', () => {
-    it('should be deterministic (same input returns same output)', () => {
-      const distance = 123.45;
-      const score1 = calculateScore(distance);
-      const score2 = calculateScore(distance);
-      expect(score1).toBe(score2);
-    });
+  it('decays smoothly with distance, with no cliff', () => {
+    const distances = [11, 50, 100, 300, 600, 1000, 1500, 1501, 3000];
+    const scores = distances.map(d => calculateScore(d, 300));
+    for (let i = 1; i < scores.length; i++) {
+      expect(scores[i]).toBeLessThanOrEqual(scores[i - 1]);
+    }
+    // No jump to 0 at 1500 km like the old formula
+    expect(scores[distances.indexOf(1500)] - scores[distances.indexOf(1501)]).toBeLessThanOrEqual(1);
+  });
 
-    it('should be pure (no side effects)', () => {
-      const distance = 50;
-      const beforeCall = JSON.stringify({ distance });
-      calculateScore(distance);
-      const afterCall = JSON.stringify({ distance });
-      expect(beforeCall).toBe(afterCall);
-    });
+  it('matches the documented examples for a mid-size country', () => {
+    expect(calculateScore(50, 450)).toBe(915);
+    expect(calculateScore(150, 450)).toBe(733);
+    expect(calculateScore(300, 450)).toBe(525);
+    expect(calculateScore(600, 450)).toBe(270);
+  });
+
+  it('scales with the size of the country', () => {
+    // The same 100 km miss is forgiving in a huge country, harsh in a small one
+    const big = calculateScore(100, 1000);
+    const small = calculateScore(100, 50);
+    expect(big).toBeGreaterThan(900);
+    expect(small).toBeLessThan(200);
+  });
+
+  it('never goes below 0 or above the maximum', () => {
+    for (const d of [-5, 0, 5, 20000, Infinity, NaN]) {
+      const s = calculateScore(d, 300);
+      expect(s).toBeGreaterThanOrEqual(0);
+      expect(s).toBeLessThanOrEqual(MAX_ROUND_SCORE);
+    }
+  });
+
+  it('falls back to a default scale for missing or invalid scales', () => {
+    expect(calculateScore(200)).toBe(calculateScore(200, 500));
+    expect(calculateScore(200, 0)).toBe(calculateScore(200, 500));
+  });
+
+  it('is identical to the multiplayer server implementation', () => {
+    for (const scale of [40, 120, 300, 700, 1000]) {
+      for (const d of [0, 10, 11, 25, 80, 250, 900, 2500, 12000]) {
+        expect(backendScoring.calculateScore(d, scale)).toBe(calculateScore(d, scale));
+      }
+    }
+    expect(backendScoring.MAX_ROUND_SCORE).toBe(MAX_ROUND_SCORE);
   });
 });
 
-describe('Level Threshold Configuration', () => {
-  describe('threshold progression', () => {
-    it('should return 3000 points for level 1', () => {
-      expect(getLevelThreshold(1)).toBe(3000);
-    });
-
-    it('should return 3500 points for level 2', () => {
-      expect(getLevelThreshold(2)).toBe(3500);
-    });
-
-    it('should scale progressively for higher levels', () => {
-      const threshold1 = getLevelThreshold(1);
-      const threshold2 = getLevelThreshold(2);
-      const threshold3 = getLevelThreshold(3);
-      const threshold4 = getLevelThreshold(4);
-      const threshold5 = getLevelThreshold(5);
-
-      expect(threshold2).toBeGreaterThan(threshold1);
-      expect(threshold3).toBeGreaterThan(threshold2);
-      expect(threshold4).toBeGreaterThan(threshold3);
-      expect(threshold5).toBeGreaterThan(threshold4);
-    });
-
-    it('should return sensible thresholds (not exceeding max possible score)', () => {
-      // Max possible score for 5 rounds is 7,500 (1500 * 5)
-      // Level thresholds cap at 10,000 for level 10+
-      for (let level = 1; level <= 10; level++) {
-        const threshold = getLevelThreshold(level);
-        expect(threshold).toBeLessThanOrEqual(10000);
-        expect(threshold).toBeGreaterThan(0);
-      }
-    });
+describe('getLevelThreshold', () => {
+  it('is reachable on every level (below the 5-round maximum)', () => {
+    for (let level = 1; level <= MAX_LEVEL; level++) {
+      const t = getLevelThreshold(level);
+      expect(t).toBeGreaterThan(0);
+      expect(t).toBeLessThan(MAX_ROUND_SCORE * ROUNDS_PER_LEVEL);
+    }
   });
 
-  describe('function properties', () => {
-    it('should be deterministic', () => {
-      const level = 5;
-      const threshold1 = getLevelThreshold(level);
-      const threshold2 = getLevelThreshold(level);
-      expect(threshold1).toBe(threshold2);
-    });
+  it('never rises as levels get harder (cities get much harder to place)', () => {
+    for (let level = 2; level <= MAX_LEVEL; level++) {
+      expect(getLevelThreshold(level)).toBeLessThanOrEqual(getLevelThreshold(level - 1));
+    }
+  });
 
-    it('should return whole numbers', () => {
-      for (let level = 1; level <= 10; level++) {
-        const threshold = getLevelThreshold(level);
-        expect(Number.isInteger(threshold)).toBe(true);
-      }
-    });
+  it('keeps the level 10 target for endless levels beyond 10', () => {
+    expect(getLevelThreshold(11)).toBe(getLevelThreshold(10));
+    expect(getLevelThreshold(25)).toBe(getLevelThreshold(10));
+  });
+
+  it('treats out-of-range input as level 1', () => {
+    expect(getLevelThreshold(0)).toBe(getLevelThreshold(1));
   });
 });

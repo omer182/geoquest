@@ -91,24 +91,23 @@ export default function CityPrompt({
       className={`fixed z-50 pointer-events-none transition-all duration-700 ease-in-out ${
         isCentered
           ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'
-          : 'top-4 right-4 translate-x-0 translate-y-0'
+          : 'top-[8.75rem] right-4 sm:top-4 translate-x-0 translate-y-0' // Below the score card on phones
       } ${
         animationPhase === 'fadeIn' ? 'opacity-0' : 'opacity-100'
       }`}
     >
       <div
-        className={`rounded-3xl shadow-2xl border-2 border-black/30 transition-all duration-700 ease-out ${
-          isSmall
-            ? 'bg-gradient-to-r from-teal-600 to-blue-600 px-3 sm:px-4 py-2.5'
-            : 'bg-gradient-to-r from-teal-600 to-blue-600 p-6 sm:p-8'
+        className={`transition-all duration-700 ease-out ${
+          isSmall ? 'hud-card px-3 sm:px-4 py-2' : 'atlas-card px-8 py-6 sm:px-12 sm:py-8'
         }`}
       >
         <div className="text-center space-y-1 sm:space-y-2">
+          {!isSmall && <div className="atlas-eyebrow text-compass">Find this city</div>}
           <div
-            className={`font-semibold transition-all duration-700 ease-out ${
+            className={`font-display transition-all duration-700 ease-out ${
               isSmall
-                ? 'text-sm sm:text-lg text-white inline truncate max-w-[140px] sm:max-w-none'
-                : 'text-2xl sm:text-3xl md:text-5xl text-white block font-bold'
+                ? 'text-base sm:text-xl text-ink font-semibold inline truncate max-w-[140px] sm:max-w-none'
+                : 'text-4xl sm:text-5xl md:text-6xl text-ink block font-bold'
             }`}
           >
             {cityName}
@@ -116,8 +115,8 @@ export default function CityPrompt({
           <div
             className={`transition-all duration-700 ease-out ${
               isSmall
-                ? 'text-xs sm:text-base text-white inline truncate max-w-[100px] sm:max-w-none'
-                : 'text-xl sm:text-2xl md:text-4xl text-white block font-semibold'
+                ? 'text-xs sm:text-sm text-ink-soft inline truncate max-w-[100px] sm:max-w-none'
+                : 'text-lg sm:text-2xl text-ink-soft block font-medium'
             }`}
           >
             {isSmall && ', '}

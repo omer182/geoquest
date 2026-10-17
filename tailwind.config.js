@@ -3,7 +3,41 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        display: ['Fraunces', 'Georgia', 'serif'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+      },
       colors: {
+        // Explorer's atlas theme - warm paper, navy ink, compass red, brass
+        paper: {
+          DEFAULT: '#FBF6EA', // Card surface
+          deep: '#F3EAD5', // Insets, table stripes
+          line: '#E0D2B4', // Hairline borders
+          edge: '#C9B48A', // Stronger rules / ornaments
+        },
+        ink: {
+          DEFAULT: '#1E2A44', // Primary text, primary buttons
+          soft: '#4F5B73', // Secondary text
+          faint: '#8B93A5', // Hints, captions
+        },
+        sea: {
+          DEFAULT: '#8FC3E6', // Ocean on the map
+          deep: '#2F6F9A', // Links, info accents
+        },
+        compass: {
+          DEFAULT: '#C8553D', // Accent / target / danger
+          dark: '#A8432E',
+          light: '#E7907C',
+        },
+        brass: {
+          DEFAULT: '#C9962B', // Gold - trophies, highlights
+          light: '#E9C46A',
+        },
+        moss: {
+          DEFAULT: '#4E8B5A', // Success
+          light: '#8CC49A',
+        },
+
         // Enhanced dark-mode color palette inspired by modern geography apps
         // Base: Rich deep blues with subtle gradients
         'dark-bg': '#0a0e1a', // Deepest background - navy black
@@ -109,6 +143,15 @@ export default {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-10px)' },
         },
+        'drift': {
+          '0%': { transform: 'translate3d(0, 0, 0)' },
+          '100%': { transform: 'translate3d(-33.3333%, 0, 0)' },
+        },
+        'stamp': {
+          '0%': { opacity: '0', transform: 'scale(1.6) rotate(-8deg)' },
+          '60%': { opacity: '1', transform: 'scale(0.95) rotate(-3deg)' },
+          '100%': { opacity: '1', transform: 'scale(1) rotate(-4deg)' },
+        },
       },
       animation: {
         'slide-up': 'slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -118,6 +161,8 @@ export default {
         'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
         'shimmer': 'shimmer 3s linear infinite',
         'float': 'float 3s ease-in-out infinite',
+        'drift': 'drift 240s linear infinite',
+        'stamp': 'stamp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both',
       },
     },
     // Mobile-first breakpoints

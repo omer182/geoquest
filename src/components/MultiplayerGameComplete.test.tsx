@@ -214,29 +214,13 @@ describe('MultiplayerGameComplete - Final Summary Enhancements', () => {
     vi.clearAllMocks();
   });
 
-  it('renders gradient background matching MainMenu aesthetic', () => {
+  it('renders on the shared atlas screen like the other menus', () => {
     const { container } = render(<MultiplayerGameComplete {...defaultProps} />);
 
-    // Check for gradient background class on main container
-    const mainContainer = container.querySelector('.bg-gradient-to-br');
-    expect(mainContainer).toBeInTheDocument();
-
-    // Check for gradient colors from MainMenu pattern
-    expect(mainContainer?.className).toMatch(/from-slate-900/);
-    expect(mainContainer?.className).toMatch(/via-blue-950/);
-    expect(mainContainer?.className).toMatch(/to-slate-900/);
-  });
-
-  it('renders animated orbs for background decoration', () => {
-    const { container } = render(<MultiplayerGameComplete {...defaultProps} />);
-
-    // Check for animated orbs (floating background elements)
-    const orbs = container.querySelectorAll('.animate-float');
-    expect(orbs.length).toBeGreaterThan(0);
-
-    // Check for blur effect on orbs
-    const blurredOrbs = container.querySelectorAll('.blur-3xl');
-    expect(blurredOrbs.length).toBeGreaterThan(0);
+    // Decorative world-map backdrop is hidden from assistive tech
+    expect(container.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
+    // Content sits on the shared paper card
+    expect(container.querySelector('.atlas-card')).toBeInTheDocument();
   });
 
   it('triggers confetti for winner only', async () => {
@@ -280,27 +264,16 @@ describe('MultiplayerGameComplete - Final Summary Enhancements', () => {
     }
   });
 
-  it('uses standardized font colors - text-gray-300 for secondary text', () => {
+  it('uses the atlas ink colours for primary and secondary text', () => {
     const { container } = render(<MultiplayerGameComplete {...defaultProps} />);
 
-    // Check for secondary text colors (labels, descriptions)
-    const secondaryElements = container.querySelectorAll('.text-gray-300');
-    expect(secondaryElements.length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('.text-ink').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('.text-ink-soft').length).toBeGreaterThan(0);
   });
 
-  it('uses success color (text-green-400) for winner and ready status', () => {
+  it('highlights the winner in brass', () => {
     const { container } = render(<MultiplayerGameComplete {...defaultProps} />);
 
-    // Check for success/green color in winner's card or ready status
-    const successElements = container.querySelectorAll('.text-green-400, .bg-green-500, .border-green-500');
-    expect(successElements.length).toBeGreaterThan(0);
-  });
-
-  it('uses semi-transparent card backgrounds with backdrop blur', () => {
-    const { container } = render(<MultiplayerGameComplete {...defaultProps} />);
-
-    // Check for semi-transparent backgrounds on inner card
-    const transparentBgs = container.querySelectorAll('[class*="bg-slate-800/50"], [class*="backdrop-blur"]');
-    expect(transparentBgs.length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('.text-brass, .border-brass').length).toBeGreaterThan(0);
   });
 });

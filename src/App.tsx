@@ -9,7 +9,7 @@ import RoomLobby from './components/RoomLobby';
 import { WebSocketProvider } from './context/WebSocketContext';
 import { GameProvider, useGame } from './context/GameContext';
 import { ConnectionStatus } from './components/ConnectionStatus';
-import globeImage from './assets/images/globe.png';
+import AtlasScreen, { AtlasHeading } from './components/ui/AtlasScreen';
 
 type AppScreen =
   | 'main-menu'
@@ -118,44 +118,26 @@ function AppContent() {
 
     case 'about':
       return (
-        <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white p-4 relative overflow-hidden">
-          {/* Enhanced gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-950/20 to-transparent pointer-events-none" />
-
-          {/* Animated orbs */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-float" />
-            <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }} />
+        <AtlasScreen>
+          <AtlasHeading eyebrow="The expedition log" title="About GeoQuest" />
+          <div className="atlas-card space-y-4 p-6 text-center">
+            <p className="text-sm leading-relaxed text-ink-soft sm:text-base">
+              GeoQuest is a geography quiz game where you test your knowledge of world cities by
+              guessing their locations on a map.
+            </p>
+            <p className="text-sm leading-relaxed text-ink-soft sm:text-base">
+              Built with React, TypeScript, Leaflet, and Socket.IO for real-time multiplayer
+              gameplay.
+            </p>
+            <p className="border-t border-paper-line pt-4 font-display text-xs italic text-ink-faint">
+              This entire project was built using spec-driven development with agent-os. Not a
+              single line of code was written or even looked at by a human - fully vibe coding.
+            </p>
+            <button onClick={handleBackToMainMenu} className="btn btn-secondary btn-block">
+              Main Menu
+            </button>
           </div>
-
-          <div className="w-full max-w-[240px] space-y-6 relative z-10 animate-fade-in-up">
-            <h1 className="text-4xl sm:text-5xl font-bold text-white mb-2 tracking-tight text-center">
-              About GeoQuest
-            </h1>
-            <div className="space-y-4 text-center">
-              <p className="text-gray-300 text-sm sm:text-base">
-                GeoQuest is a geography quiz game where you test your knowledge of world cities by
-                guessing their locations on a map.
-              </p>
-              <p className="text-gray-300 text-sm sm:text-base">
-                Built with React, TypeScript, Leaflet, and Socket.IO for real-time multiplayer
-                gameplay.
-              </p>
-              <p className="text-gray-400 text-xs italic mt-4">
-                This entire project was built using spec-driven development with agent-os. Not a
-                single line of code was written or even looked at by a human - fully vibe coding.
-              </p>
-            </div>
-            <div className="space-y-2 mt-6">
-              <button
-                onClick={handleBackToMainMenu}
-                className="group w-full py-2.5 px-4 bg-transparent hover:bg-dark-elevated text-gray-400 hover:text-white font-medium text-sm rounded-lg transition-all duration-200 border border-gray-700 hover:border-gray-600"
-              >
-                Main Menu
-              </button>
-            </div>
-          </div>
-        </div>
+        </AtlasScreen>
       );
 
     default:
@@ -175,15 +157,12 @@ function App() {
   return (
     <WebSocketProvider>
       <GameProvider>
-        <Toaster position="top-center" richColors />
-        {/* Globe image - positioned on bottom-left, partially off-screen - persists across all screens */}
-        <div className="fixed left-0 bottom-0 -translate-x-1/3 translate-y-[43%] pointer-events-none z-[5]">
-          <img 
-            src={globeImage} 
-            alt="Globe" 
-            className="w-[1152px] h-[1152px] object-contain"
-          />
-        </div>
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            style: { background: '#FBF6EA', color: '#1E2A44', border: '1px solid #E0D2B4', fontFamily: 'Inter, sans-serif' },
+          }}
+        />
         <AppContent />
       </GameProvider>
     </WebSocketProvider>

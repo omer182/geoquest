@@ -83,7 +83,7 @@ export default function GameInfoCard({
       spread: 100,
       startVelocity: 20,
       origin: { x: 0.1, y: 0.15 }, // Positioned over progress bar area
-      colors: ['#10b981', '#22d3ee', '#3b82f6', '#a855f7', '#f59e0b'], // Green, teal, blue, purple, amber
+      colors: ['#C8553D', '#C9962B', '#4E8B5A', '#2F6F9A', '#1E2A44'], // Atlas palette
       scalar: 0.8, // Smaller scale
       gravity: 1, // Less gravity for more visible particles
     });
@@ -107,48 +107,56 @@ export default function GameInfoCard({
     }
   };
 
+  const passed = pointsNeeded === 0;
+
   return (
     <div
-      className={`bg-gradient-to-r from-teal-600 to-blue-600 rounded-3xl shadow-2xl border-2 border-black/30 px-3 py-2 min-w-[240px] ${
-        pointsNeeded === 0 ? 'cursor-pointer hover:scale-105 transition-transform duration-200' : ''
+      className={`hud-card w-[208px] px-3.5 pt-2.5 pb-3 sm:w-[244px] ${
+        passed ? 'cursor-pointer hover:scale-105 transition-transform duration-200' : ''
       }`}
       onClick={handleClick}
-      role={pointsNeeded === 0 ? 'button' : undefined}
-      aria-label={pointsNeeded === 0 ? 'Click to celebrate!' : undefined}
+      role={passed ? 'button' : undefined}
+      aria-label={passed ? 'Click to celebrate!' : undefined}
     >
-      {/* Header: Round X/5 🏆 Level X */}
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-gray-300 font-medium text-xs">
-          Round {round}/5
+      {/* Header: Round X/5 · Level pill */}
+      <div className="flex items-center justify-between">
+        <span className="atlas-eyebrow">Round {round}/5</span>
+        <span className="flex items-center gap-1 rounded-full bg-ink px-2 py-0.5 text-xs font-semibold text-paper">
+          <span aria-hidden="true">🏆</span>
+          Level {level}
         </span>
-        <div className="flex items-center gap-1">
-          <span className="text-sm">🏆</span>
-          <span className="text-white font-semibold text-xs">
-            Level {level}
-          </span>
-        </div>
       </div>
 
-      {/* Score: XX pts | XXXX to advance */}
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-white font-bold text-lg">
-          {formatNumber(totalScore)} pts
-        </span>
-        {pointsNeeded > 0 && (
-          <span className="text-gray-400 text-xs">
-            {formatNumber(pointsNeeded)} to advance
-          </span>
-        )}
+      {/* Score against the level target, on one baseline */}
+      <div className="mt-1 flex items-baseline gap-1.5 tabular-nums">
+        <span className="font-display text-2xl font-bold leading-none text-ink">{formatNumber(totalScore)}</span>
+        <span className="text-sm font-medium text-ink-faint">/ {formatNumber(requiredScore)}</span>
       </div>
 
-      {/* Progress bar */}
-      <div className="w-full bg-dark-surface rounded-full h-1.5 overflow-hidden">
+      {/* Progress toward the target */}
+      <div
+        className="mt-2 h-2 w-full overflow-hidden rounded-full bg-paper-line"
+        role="progressbar"
+        aria-valuenow={Math.round(progressPercentage)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Progress to the level target"
+      >
         <div
-          className={`h-full rounded-full transition-all duration-500 ease-out ${
-            pointsNeeded === 0 ? 'bg-green-500' : 'bg-primary'
-          }`}
+          className={`h-full rounded-full transition-all duration-500 ease-out ${passed ? 'bg-moss' : 'bg-compass'}`}
           style={{ width: `${progressPercentage}%` }}
         />
+      </div>
+
+      {/* What's left */}
+      <div className="mt-1.5 text-xs">
+        {passed ? (
+          <span className="font-semibold text-moss">✓ Target reached</span>
+        ) : (
+          <span className="text-ink-soft">
+            <span className="font-semibold tabular-nums text-ink">{formatNumber(pointsNeeded)}</span> to advance
+          </span>
+        )}
       </div>
     </div>
   );

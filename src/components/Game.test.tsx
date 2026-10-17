@@ -5,11 +5,11 @@ import { GameProvider } from '../context/GameContext';
 import type { City } from '../types/city';
 
 const TEST_CITIES: City[] = [
-  { name: 'Paris', country: 'France', latitude: 48.8566, longitude: 2.3522, tier: 1 },
-  { name: 'Tokyo', country: 'Japan', latitude: 35.6762, longitude: 139.6503, tier: 1 },
-  { name: 'Cairo', country: 'Egypt', latitude: 30.0444, longitude: 31.2357, tier: 1 },
-  { name: 'Lima', country: 'Peru', latitude: -12.0464, longitude: -77.0428, tier: 1 },
-  { name: 'Oslo', country: 'Norway', latitude: 59.9139, longitude: 10.7522, tier: 1 },
+  { name: 'Paris', country: 'France', latitude: 48.8566, longitude: 2.3522, level: 1, scaleKm: 400 },
+  { name: 'Tokyo', country: 'Japan', latitude: 35.6762, longitude: 139.6503, level: 1, scaleKm: 400 },
+  { name: 'Cairo', country: 'Egypt', latitude: 30.0444, longitude: 31.2357, level: 1, scaleKm: 400 },
+  { name: 'Lima', country: 'Peru', latitude: -12.0464, longitude: -77.0428, level: 1, scaleKm: 400 },
+  { name: 'Oslo', country: 'Norway', latitude: 59.9139, longitude: 10.7522, level: 1, scaleKm: 400 },
 ];
 
 vi.mock('../data/cities', () => ({
@@ -129,8 +129,8 @@ describe('Game Integration', () => {
     fireEvent.click(screen.getByText('Drop pin'));
     fireEvent.click(screen.getByRole('button', { name: /confirm guess/i }));
 
-    // A pin right on the city earns the 1500-point maximum
-    expect(screen.getByLabelText('1,500 points')).toBeInTheDocument();
+    // A pin right on the city earns the 1000-point maximum
+    expect(screen.getByLabelText('1,000 points')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /continue to next round/i })).toBeInTheDocument();
   });
 

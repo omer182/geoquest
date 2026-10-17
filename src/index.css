@@ -18,25 +18,166 @@ body {
   width: 100%;
 }
 
-/* Hide all text labels on map tiles - critical for guessing game */
-.leaflet-tile-pane img {
-  /* This targets the tile images, but labels are baked into the images */
+@layer base {
+  body {
+    @apply bg-paper-deep font-sans text-ink antialiased;
+  }
+
+  .font-display {
+    font-optical-sizing: auto;
+    letter-spacing: -0.01em;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-sea-deep ring-offset-2 ring-offset-paper;
+  }
 }
 
-/* Hide text elements in map tiles - labels are part of the tile images */
-.leaflet-container {
-  /* Force hide any text overlays that might appear */
+/* ============================================================
+ * Explorer's atlas components
+ * Shared by every screen so menus, lobby and in-game HUD match.
+ * ============================================================ */
+@layer components {
+  /* Paper card with a thin double rule, like a label on an old map */
+  .atlas-card {
+    @apply relative rounded-2xl border border-paper-line bg-paper text-ink;
+    box-shadow:
+      inset 0 0 0 4px #fbf6ea,
+      inset 0 0 0 5px rgba(201, 180, 138, 0.45),
+      0 18px 40px -18px rgba(30, 42, 68, 0.45),
+      0 2px 6px rgba(30, 42, 68, 0.08);
+  }
+
+  /* Floating card over the live map: slightly translucent so the map shows through */
+  .hud-card {
+    @apply rounded-2xl border border-paper-line text-ink;
+    background: rgba(251, 246, 234, 0.94);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow:
+      0 10px 28px -12px rgba(30, 42, 68, 0.45),
+      0 1px 3px rgba(30, 42, 68, 0.1);
+  }
+
+  /* Small caps caption, e.g. "ROUND 2 / 5" */
+  .atlas-eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-faint;
+  }
+
+  /* Horizontal ornament: ─── ✦ text ✦ ─── */
+  .atlas-rule {
+    @apply flex items-center gap-3 text-ink-faint;
+  }
+  .atlas-rule::before,
+  .atlas-rule::after {
+    content: '';
+    @apply h-px flex-1 bg-paper-edge/70;
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    @apply inline-flex min-h-[44px] select-none items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-[15px] font-semibold transition-all duration-150 ease-out;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn:not(:disabled):active {
+    transform: translateY(1px) scale(0.99);
+  }
+  .btn-block {
+    @apply w-full;
+  }
+
+  /* Navy ink, the main call to action */
+  .btn-primary {
+    @apply bg-ink text-paper;
+    box-shadow:
+      0 2px 0 #0f1729,
+      0 8px 18px -8px rgba(30, 42, 68, 0.7);
+  }
+  .btn-primary:not(:disabled):hover {
+    @apply bg-[#27365a];
+  }
+
+  /* Compass red for decisive game actions (confirm guess, start) */
+  .btn-accent {
+    @apply bg-compass text-white;
+    box-shadow:
+      0 2px 0 #8e3725,
+      0 8px 18px -8px rgba(200, 85, 61, 0.8);
+  }
+  .btn-accent:not(:disabled):hover {
+    @apply bg-compass-dark;
+  }
+
+  /* Moss green for positive progression (next level, ready) */
+  .btn-success {
+    @apply bg-moss text-white;
+    box-shadow:
+      0 2px 0 #3a6a44,
+      0 8px 18px -8px rgba(78, 139, 90, 0.8);
+  }
+  .btn-success:not(:disabled):hover {
+    @apply bg-[#447d4f];
+  }
+
+  /* Paper button with a hairline border */
+  .btn-secondary {
+    @apply border border-paper-edge/80 bg-paper text-ink;
+    box-shadow: 0 2px 0 rgba(201, 180, 138, 0.6);
+  }
+  .btn-secondary:not(:disabled):hover {
+    @apply bg-paper-deep;
+  }
+
+  /* Quiet text button */
+  .btn-ghost {
+    @apply text-ink-soft;
+  }
+  .btn-ghost:not(:disabled):hover {
+    @apply bg-ink/5 text-ink;
+  }
+
+  .btn-danger {
+    @apply border border-compass/40 bg-transparent text-compass-dark;
+  }
+  .btn-danger:not(:disabled):hover {
+    @apply bg-compass/10;
+  }
+
+  /* Keyboard hint inside buttons */
+  .kbd {
+    @apply rounded border border-white/25 bg-black/15 px-1.5 py-0.5 font-mono text-[10px] font-semibold opacity-80;
+  }
+
+  /* ---------- Forms ---------- */
+  .atlas-label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-[0.14em] text-ink-soft;
+  }
+  .atlas-input {
+    @apply w-full rounded-xl border border-paper-edge/80 bg-white/70 px-4 py-3 text-ink placeholder:text-ink-faint/80;
+    @apply transition-colors focus:border-sea-deep focus:bg-white focus:outline-none;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  /* ---------- Notices ---------- */
+  .atlas-notice {
+    @apply rounded-xl border px-3 py-2.5 text-center text-sm;
+  }
+  .atlas-notice-warn {
+    @apply border-brass/50 bg-brass-light/20 text-[#7a5a14];
+  }
+  .atlas-notice-error {
+    @apply border-compass/40 bg-compass/10 text-compass-dark;
+  }
+
+  /* Status dot (ready / not ready) */
+  .status-dot {
+    @apply h-2.5 w-2.5 flex-shrink-0 rounded-full;
+  }
 }
 
-/* Hide any text labels that might be rendered separately */
-.leaflet-tile-container img {
-  /* Labels are baked into OpenStreetMap tiles, so we need a different approach */
-}
-
-/* Use CSS filter to reduce label visibility - alternative approach */
-.leaflet-tile-pane {
-  filter: contrast(1.1) brightness(1.05);
-}
+/* ============================================================
+ * Leaflet overrides
+ * ============================================================ */
 
 /* Ensure polylines render above ALL map layers including GeoJSON */
 .leaflet-pane.leaflet-overlay-pane {
@@ -60,18 +201,30 @@ body {
   border: none !important;
 }
 
-/* Fade-in animation for distance line */
-.distance-line-draw {
-  animation: fadeInLine 0.8s ease-out forwards;
+.leaflet-container {
+  font-family: Inter, system-ui, sans-serif;
 }
 
-@keyframes fadeInLine {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+.leaflet-control-attribution {
+  background: rgba(251, 246, 234, 0.75) !important;
+  color: #4f5b73 !important;
+  font-size: 10px !important;
+  border-top-left-radius: 6px;
+}
+.leaflet-control-attribution a {
+  color: #2f6f9a !important;
+}
+
+/* Map label tooltips (city name, player names) styled as paper tags */
+.leaflet-tooltip.atlas-tooltip {
+  background: #fbf6ea;
+  border: 1px solid #c9b48a;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px -4px rgba(30, 42, 68, 0.5);
+  padding: 0;
+}
+.leaflet-tooltip.atlas-tooltip::before {
+  display: none;
 }
 
 /* Distance label on the line */
@@ -82,14 +235,15 @@ body {
 }
 
 .distance-label {
-  background: #1e293b;
-  color: #22d3ee;
-  padding: 6px 12px;
-  border-radius: 8px;
+  background: #1e2a44;
+  color: #fbf6ea;
+  padding: 5px 12px;
+  border-radius: 999px;
   font-weight: 700;
-  font-size: 14px;
-  border: 2px solid #22d3ee;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  border: 1.5px solid #fbf6ea;
+  box-shadow: 0 4px 10px -2px rgba(30, 42, 68, 0.5);
   white-space: nowrap;
   text-align: center;
 }
@@ -103,5 +257,11 @@ body {
   100% {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-drift {
+    animation: none;
   }
 }

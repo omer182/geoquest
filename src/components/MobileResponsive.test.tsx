@@ -49,11 +49,11 @@ describe('Mobile Responsive Tests - 390px width (iPhone 14 Pro)', () => {
       <RoomLobby onGameStart={vi.fn()} onLeave={vi.fn()} />
     );
 
-    // Check that main container exists
-    const mainDiv = container.querySelector('.max-w-\\[280px\\]');
+    // Content column is width-capped and padded so it never overflows 390px
+    const mainDiv = container.querySelector('.max-w-\\[380px\\]');
     expect(mainDiv).toBeInTheDocument();
+    expect(mainDiv).toHaveClass('w-full', 'px-4');
 
-    // Check for responsive text sizes (should use sm: or smaller on mobile)
     expect(screen.getByText('Room Lobby')).toBeInTheDocument();
     expect(screen.getByText('TEST123')).toBeInTheDocument();
   });
@@ -80,8 +80,8 @@ describe('Mobile Responsive Tests - 390px width (iPhone 14 Pro)', () => {
       />
     );
 
-    // Check that results card has max width constraint
-    const resultsCard = container.querySelector('.max-w-\\[280px\\]');
+    // Results card is capped to the viewport width minus the side gutters
+    const resultsCard = container.querySelector('.max-w-\\[calc\\(100vw-2rem\\)\\]');
     expect(resultsCard).toBeInTheDocument();
 
     // Check that table renders with all 5 players
@@ -114,8 +114,8 @@ describe('Mobile Responsive Tests - 390px width (iPhone 14 Pro)', () => {
       />
     );
 
-    // Check that main container has max width constraint
-    const mainDiv = container.querySelector('.max-w-\\[290px\\]');
+    // Content column is width-capped on phones
+    const mainDiv = container.querySelector('.max-w-\\[360px\\]');
     expect(mainDiv).toBeInTheDocument();
 
     // Check that all player cards render (Alice appears twice: in standings and in rematch list)

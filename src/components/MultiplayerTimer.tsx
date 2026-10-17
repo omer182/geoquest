@@ -45,11 +45,11 @@ export default function MultiplayerTimer({
   const percentageRemaining = (remainingTime / timerDuration) * 100;
 
   // Determine color based on percentage thresholds
-  let colorClass = 'text-white'; // 100-67%
+  let colorClass = 'text-ink'; // 100-67%
   if (percentageRemaining <= 66 && percentageRemaining > 32) {
-    colorClass = 'text-amber-400'; // 66-33%
+    colorClass = 'text-brass'; // 66-33%
   } else if (percentageRemaining <= 32) {
-    colorClass = 'text-red-500 animate-pulse'; // 32-0% with pulse
+    colorClass = 'text-compass animate-pulse'; // 32-0% with pulse
   }
 
   // Format time as MM:SS
@@ -59,11 +59,17 @@ export default function MultiplayerTimer({
 
   return (
     <div className="absolute top-4 left-4 sm:left-1/2 sm:-translate-x-1/2 z-50 animate-fade-in">
-      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-3xl border-2 border-black/30 px-3 sm:px-4 py-2.5 shadow-lg">
+      <div className="hud-card overflow-hidden px-4 pt-2 pb-2.5">
         <div
-          className={`text-lg sm:text-xl md:text-2xl font-bold font-mono ${colorClass} transition-colors duration-300`}
+          className={`text-lg sm:text-xl md:text-2xl font-bold font-mono tabular-nums text-center ${colorClass} transition-colors duration-300`}
         >
           {formattedTime}
+        </div>
+        <div className="mt-1 h-1 w-20 overflow-hidden rounded-full bg-paper-line">
+          <div
+            className={`h-full rounded-full ${percentageRemaining <= 32 ? 'bg-compass' : percentageRemaining <= 66 ? 'bg-brass' : 'bg-ink'}`}
+            style={{ width: `${percentageRemaining}%` }}
+          />
         </div>
       </div>
     </div>

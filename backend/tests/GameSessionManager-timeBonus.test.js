@@ -33,7 +33,7 @@ describe('GameSessionManager - Time Bonus Scoring', () => {
 
   describe('Time Bonus Calculation', () => {
     // Time bonus is 25% of the round's base score, scaled by time remaining.
-    // These near-perfect guesses all score the 1500 cap, so the max bonus is 375.
+    // These near-perfect guesses all score the 1000 maximum, so the max bonus is 250.
     it('should award maximum time bonus (25% of base score) when submitting at full time remaining', () => {
       const session = sessionManager.createSession('ABC123', mockCities, 'medium', 30, mockPlayers);
       const roundStartTime = session.startRound();
@@ -43,8 +43,8 @@ describe('GameSessionManager - Time Bonus Scoring', () => {
 
       const result = session.addGuess('player1', { lat: 40.7130, lng: -74.0060 }, roundStartTime);
 
-      expect(result.score).toBe(1500);
-      expect(result.timeBonus).toBe(375); // Max bonus for immediate submission
+      expect(result.score).toBe(1000);
+      expect(result.timeBonus).toBe(250); // Max bonus for immediate submission
       mockNow.mockRestore();
     });
 
@@ -72,8 +72,8 @@ describe('GameSessionManager - Time Bonus Scoring', () => {
 
       const result = session.addGuess('player1', { lat: 40.7130, lng: -74.0060 }, roundStartTime);
 
-      // Expected: (15s remaining / 30s total) * 375 = 187.5 -> 187 points
-      expect(result.timeBonus).toBe(187);
+      // Expected: (15s remaining / 30s total) * 250 = 125 points
+      expect(result.timeBonus).toBe(125);
       mockNow.mockRestore();
     });
 
@@ -86,8 +86,8 @@ describe('GameSessionManager - Time Bonus Scoring', () => {
         .mockReturnValue(easyStartTime + 22500); // 22.5s elapsed, 22.5s remaining
 
       const easyResult = easySession.addGuess('player1', { lat: 40.7130, lng: -74.0060 }, easyStartTime);
-      // Expected: (22.5 / 45) * 375 = 187.5 -> 187 points
-      expect(easyResult.timeBonus).toBe(187);
+      // Expected: (22.5 / 45) * 250 = 125 points
+      expect(easyResult.timeBonus).toBe(125);
 
       mockNow1.mockRestore();
 
@@ -99,8 +99,8 @@ describe('GameSessionManager - Time Bonus Scoring', () => {
         .mockReturnValue(hardStartTime + 10000); // 10s elapsed, 10s remaining
 
       const hardResult = hardSession.addGuess('player1', { lat: 40.7130, lng: -74.0060 }, hardStartTime);
-      // Expected: (10 / 20) * 375 = 187.5 -> 187 points
-      expect(hardResult.timeBonus).toBe(187);
+      // Expected: (10 / 20) * 250 = 125 points
+      expect(hardResult.timeBonus).toBe(125);
 
       mockNow2.mockRestore();
     });
@@ -146,13 +146,13 @@ describe('GameSessionManager - Time Bonus Scoring', () => {
 
       const results = session.calculateRoundResults();
 
-      // Player 1: (25s / 30s) * 375 = 312.5 -> 312
+      // Player 1: (25s / 30s) * 250 = 208.3 -> 208
       const player1Result = results.find(r => r.playerId === 'player1');
-      expect(player1Result.timeBonus).toBe(312);
+      expect(player1Result.timeBonus).toBe(208);
 
-      // Player 2: (10s / 30s) * 375 = 125
+      // Player 2: (10s / 30s) * 250 = 83.3 -> 83
       const player2Result = results.find(r => r.playerId === 'player2');
-      expect(player2Result.timeBonus).toBe(125);
+      expect(player2Result.timeBonus).toBe(83);
     });
   });
 
@@ -167,8 +167,8 @@ describe('GameSessionManager - Time Bonus Scoring', () => {
 
       const result = session.addGuess('player1', { lat: 40.7130, lng: -74.0060 }, roundStartTime);
 
-      // Expected time bonus: (25 / 30) * 375 = 312.5 -> 312
-      expect(result.timeBonus).toBe(312);
+      // Expected time bonus: (25 / 30) * 250 = 208.3 -> 208
+      expect(result.timeBonus).toBe(208);
 
       // Total score should be distance score + time bonus
       const playerScore = session.playerScores.get('player1');

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useGame } from '../context/GameContext';
 import { GameStatus } from '../types/game';
 import { selectCitiesForLevel } from '../data/cities';
@@ -20,6 +20,7 @@ import WaitingIndicator from './WaitingIndicator';
 import MultiplayerRoundResults from './MultiplayerRoundResults';
 import MultiplayerGameComplete from './MultiplayerGameComplete';
 import DisconnectedPlayerModal from './DisconnectedPlayerModal';
+import AtlasScreen, { AtlasHeading } from './ui/AtlasScreen';
 
 interface GameProps {
   /** Callback to navigate back to main menu */
@@ -103,8 +104,8 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
         currentCity.longitude
       );
 
-      // Calculate score based on distance, city difficulty, and level
-      const score = calculateScore(distance, currentCity.tier, state.currentLevel);
+      // 0-1000, scaled to the size of the city's country (see utils/scoring)
+      const score = calculateScore(distance, currentCity.scaleKm);
 
       // Dispatch SUBMIT_GUESS action to update game state
       dispatch({
@@ -497,6 +498,28 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   };
 
   /**
+   * Keyboard shortcuts: Enter / Space confirms the placed pin, then advances to the next round.
+   * Ignored while typing or when a button has focus (it handles the key itself).
+   */
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest('input, textarea, select, button, [contenteditable="true"]')) return;
+
+      if (state.gameStatus === GameStatus.GUESSING && currentGuess && !state.multiplayerGameState?.hasGuessed) {
+        e.preventDefault();
+        handleConfirmGuess();
+      } else if (state.gameMode === 'single-player' && state.gameStatus === GameStatus.ROUND_COMPLETE) {
+        e.preventDefault();
+        handleContinue();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
+
+  /**
    * Current city for the active round
    */
   const currentCity = state.selectedCities[
@@ -504,6 +527,32 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
       ? (state.multiplayerGameState?.currentRound || 1) - 1
       : state.currentRound - 1
   ];
+
+  /**
+   * Multiplayer guesses for the results map. Memoised so the countdown ticking
+   * every second doesn't hand the map a new array (and restart its animations).
+   * Colours follow the room's player order, so each player keeps one colour all game.
+   */
+  const roundResults = state.multiplayerGameState?.roundResults;
+  const roomPlayers = state.currentRoom?.players;
+  const showMultiplayerResults =
+    state.gameMode === 'multiplayer' && state.gameStatus === GameStatus.ROUND_COMPLETE;
+  const multiplayerGuesses = useMemo(() => {
+    if (!showMultiplayerResults || !roundResults) return undefined;
+    const colors = ['#3b82f6', '#10b981', '#a855f7', '#f97316', '#eab308'];
+    return roundResults
+      .filter(result => result.guess !== null) // Filter out null guesses
+      .map((result, index) => {
+        const seat = roomPlayers?.findIndex(p => p.id === result.playerId) ?? -1;
+        return {
+          playerId: result.playerId,
+          playerName: result.playerName,
+          guess: result.guess as { lat: number; lng: number },
+          color: colors[(seat >= 0 ? seat : index) % colors.length],
+          distance: result.distance || undefined,
+        };
+      });
+  }, [showMultiplayerResults, roundResults, roomPlayers]);
 
   // Determine if we should show LEVEL_FAILED state
   const levelPassed =
@@ -524,48 +573,31 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   }, [levelFailed, state.gameStatus]);
 
     return (
-      <div className="h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col relative overflow-hidden">
-      {/* Enhanced gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-950/20 to-transparent pointer-events-none" />
-
-      {/* Animated orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }} />
-        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '3s' }} />
-      </div>
-
+      <div className="h-screen bg-paper-deep flex flex-col relative overflow-hidden">
       <div className="relative z-10 flex flex-col h-full overflow-hidden">
       {/* READY State: Initial start screen */}
       {state.gameStatus === GameStatus.READY && state.gameMode === 'single-player' && (
-        <div className="flex-1 flex items-center justify-center p-4">
-          <div className="w-full max-w-[240px] space-y-3 relative z-10 animate-fade-in-up">
-            {/* Logo/Title - Exact same structure and position as MainMenu */}
-            <div className="text-center mb-4">
-              <h1 className="text-4xl sm:text-5xl font-bold mb-2 text-white tracking-tight">
-                Solo Run
-              </h1>
-              <p className="text-gray-400 text-sm sm:text-base">Beat levels to master geography!</p>
-            </div>
-
-            {/* Menu Buttons */}
-            <div className="space-y-2">
-                <button
-                  onClick={handleStartGame}
-                  className="group relative w-full py-3 px-4 bg-primary hover:bg-primary-dark text-white font-semibold text-base rounded-lg transition-all duration-200 shadow-lg hover:shadow-glow-sm transform hover:scale-[1.02] active:scale-[0.98]"
-                >
+        <div className="flex-1 min-h-0">
+          <AtlasScreen>
+            <AtlasHeading eyebrow="Single player" title="Solo Run" subtitle="Beat levels to master geography!" />
+            <div className="atlas-card p-5">
+              <ul className="mb-4 space-y-1.5 text-sm text-ink-soft">
+                <li className="flex gap-2"><span aria-hidden="true">📍</span>Pin each city as close as you can</li>
+                <li className="flex gap-2"><span aria-hidden="true">🎯</span>5 rounds per level, hit the target score</li>
+                <li className="flex gap-2"><span aria-hidden="true">🏔️</span>10 levels, from capitals to hidden gems</li>
+              </ul>
+              <div className="space-y-2">
+                <button onClick={handleStartGame} className="btn btn-accent btn-block">
                   Start Game
                 </button>
                 {onBackToMainMenu && (
-                  <button
-                    onClick={onBackToMainMenu}
-                    className="group w-full py-2.5 px-4 bg-transparent hover:bg-dark-elevated text-gray-400 hover:text-white font-medium text-sm rounded-lg transition-all duration-200 border border-gray-700 hover:border-gray-600"
-                  >
+                  <button onClick={onBackToMainMenu} className="btn btn-ghost btn-block text-sm">
                     Main Menu
                   </button>
                 )}
+              </div>
             </div>
-          </div>
+          </AtlasScreen>
         </div>
       )}
 
@@ -598,21 +630,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                   ? state.currentDistance
                   : undefined
               }
-              playerGuesses={
-                state.gameMode === 'multiplayer' &&
-                state.gameStatus === GameStatus.ROUND_COMPLETE &&
-                state.multiplayerGameState?.roundResults
-                  ? state.multiplayerGameState.roundResults
-                      .filter(result => result.guess !== null) // Filter out null guesses
-                      .map((result, index) => ({
-                        playerId: result.playerId,
-                        playerName: result.playerName,
-                        guess: result.guess as { lat: number; lng: number },
-                        color: ['#3b82f6', '#10b981', '#a855f7', '#f97316', '#eab308'][index % 5],
-                        distance: result.distance || undefined,
-                      }))
-                  : undefined
-              }
+              playerGuesses={multiplayerGuesses}
               cityName={
                 state.gameStatus === GameStatus.ROUND_COMPLETE && currentCity
                   ? currentCity.name
@@ -622,7 +640,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
 
             {/* Game Info Card - Only show in single-player mode */}
             {state.gameMode === 'single-player' && (
-              <div className="absolute top-4 left-4 z-20">
+              <div className="absolute top-4 left-4 z-20" data-map-overlay="top">
                 <GameInfoCard
                   level={state.currentLevel}
                   round={state.currentRound}
@@ -650,14 +668,14 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                       }
                       onBackToMainMenu?.();
                     }}
-                    className="bg-gradient-to-r from-teal-600 to-blue-600 text-white font-semibold text-sm px-4 py-2.5 rounded-3xl border-2 border-black/30 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 min-h-[44px]"
+                    className="hud-card btn px-4 text-sm hover:bg-paper"
                     aria-label="Return to main menu"
                   >
                     Main Menu
                   </button>
                 </div>
-                {/* Mobile: Bottom-right menu icon */}
-                <div className="sm:hidden fixed bottom-4 right-4 z-[60]">
+                {/* Mobile: Bottom-right menu icon - hidden behind the results card on narrow screens */}
+                <div className={`sm:hidden fixed bottom-4 right-4 z-[60] ${state.gameStatus === GameStatus.ROUND_COMPLETE ? 'hidden' : ''}`}>
                   <button
                     onClick={() => {
                       // Reset game state before going back to main menu
@@ -669,7 +687,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                       }
                       onBackToMainMenu?.();
                     }}
-                    className="bg-gradient-to-r from-teal-600 to-blue-600 text-white font-semibold text-xs px-3 py-2 rounded-3xl border-2 border-black/30 shadow-lg min-h-[36px] flex items-center justify-center"
+                    className="hud-card btn min-h-[40px] px-3 py-2 text-xs"
                     aria-label="Return to main menu"
                   >
                     Menu
@@ -714,7 +732,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                   }}
                 />
               ) : animationCompleted ? (
-                <div className="absolute top-16 left-4 sm:left-auto sm:right-4 z-20">
+                <div className="absolute top-[5.5rem] left-4 sm:top-4 sm:left-auto sm:right-4 z-20">
                   <CityPrompt cityName={currentCity.name} country={currentCity.country} />
                 </div>
               ) : null
@@ -729,6 +747,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                   distance={state.currentDistance}
                   score={state.roundScores[state.roundScores.length - 1] || 0}
                   cityName={currentCity.name}
+                  country={currentCity.country}
                   onContinue={handleContinue}
                 />
               )}

@@ -62,7 +62,7 @@ describe('GameSessionManager', () => {
       const result = session.addGuess('player1', { lat: 40.7130, lng: -74.0060 }, Date.now());
 
       expect(result.distance).toBeLessThan(1);
-      expect(result.score).toBe(1500); // Max (capped) score per round
+      expect(result.score).toBe(1000); // Max score per round (within 10 km)
       expect(result.isRoundComplete).toBe(false); // Only 1 of 2 players submitted
     });
 

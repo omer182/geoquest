@@ -15,6 +15,22 @@
 import { calculateDistance } from '../utils/distance.js';
 import { calculateScore } from '../utils/scoring.js';
 
+const sumScores = (scores) => scores.reduce((sum, s) => sum + s, 0);
+
+/** Distance counted for a round with no pin, so skipping never beats guessing */
+const NO_GUESS_DISTANCE_KM = 20038; // half the Earth's circumference
+const sumDistances = (distances) =>
+  distances.reduce((sum, d) => sum + (d === null || d === undefined ? NO_GUESS_DISTANCE_KM : d), 0);
+
+/**
+ * Ranking order: total score (with time bonuses) first; on a tie the player
+ * with the better accuracy (score without time bonuses) ranks higher, then
+ * the one whose guesses were closer overall (far misses all score 0, so
+ * distance is what separates them).
+ */
+const compareStandings = (a, b) =>
+  b.totalScore - a.totalScore || b.accuracy - a.accuracy || a.totalDistance - b.totalDistance;
+
 /**
  * Represents a single multiplayer game session
  */
@@ -131,11 +147,8 @@ export class GameSession {
       currentCity.longitude
     );
 
-    // Map difficulty to level equivalent for scoring
-    // easy = level 1, medium = level 5, hard = level 10
-    const levelEquivalent = this.difficulty === 'easy' ? 1 : this.difficulty === 'hard' ? 10 : 5;
-
-    const score = calculateScore(distance, currentCity.tier || 1, levelEquivalent);
+    // Same scoring as single player: 0-1000, scaled to the size of the city's country
+    const score = calculateScore(distance, currentCity.scaleKm);
 
     // Calculate time bonus based on submission speed (25% of base score)
     const timeBonus = this.calculateTimeBonus(submittedAt, score);
@@ -230,8 +243,14 @@ export class GameSession {
       }
     });
 
-    // Sort by round score + time bonus (descending)
-    results.sort((a, b) => (b.score + b.timeBonus) - (a.score + a.timeBonus));
+    // Sort by round score + time bonus (descending); ties go to the more accurate,
+    // then the closer guess (no pin counts as the furthest possible)
+    results.sort(
+      (a, b) =>
+        b.score + b.timeBonus - (a.score + a.timeBonus) ||
+        b.score - a.score ||
+        sumDistances([a.distance]) - sumDistances([b.distance])
+    );
 
     return results;
   }
@@ -248,11 +267,16 @@ export class GameSession {
         playerId: socketId,
         playerName: scoreData.playerName,
         totalScore: scoreData.totalScore,
+        accuracy: sumScores(scoreData.roundScores),
+        totalDistance: sumDistances(scoreData.roundDistances),
       });
     });
 
-    // Sort by total score (descending)
-    standings.sort((a, b) => b.totalScore - a.totalScore);
+    standings.sort(compareStandings);
+    standings.forEach((s) => {
+      delete s.accuracy;
+      delete s.totalDistance;
+    });
 
     return standings;
   }
@@ -307,11 +331,16 @@ export class GameSession {
         roundScores,
         bestRound,
         worstRound,
+        accuracy: sumScores(roundScores),
+        totalDistance: sumDistances(roundDistances),
       });
     });
 
-    // Sort by total score (descending)
-    finalStandings.sort((a, b) => b.totalScore - a.totalScore);
+    finalStandings.sort(compareStandings);
+    finalStandings.forEach((s) => {
+      delete s.accuracy;
+      delete s.totalDistance;
+    });
 
     // Determine winner
     const winner = finalStandings.length > 0
