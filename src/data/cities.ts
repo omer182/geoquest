@@ -5,8 +5,9 @@ import { MAX_LEVEL } from '../utils/scoring';
 
 /**
  * All cities, each tagged with a difficulty level (1-10) and a score scale.
- * Levels were assigned by simulated expected score: how obscure a city is and
- * how hard it is to place inside its (always shown) country.
+ * Levels 1-3 are hand-picked famous cities; levels 4-10 were assigned by
+ * simulated expected score: how obscure a city is and how hard it is to place
+ * inside its (always shown) country.
  */
 export const CITIES: readonly City[] = cityData as City[];
 

@@ -44,6 +44,16 @@ describe('city database', () => {
     }
   });
 
+  it('keeps levels 1-3 to famous cities', () => {
+    const levelOf = (name: string) => CITIES.find(c => c.name === name)?.level;
+    for (const name of ['Tokyo', 'London', 'New York', 'Paris', 'Sydney', 'Rio de Janeiro', 'Moscow', 'Beijing']) {
+      expect(levelOf(name)).toBe(1);
+    }
+    for (const name of ['Dimona', 'Arad', 'Luang Prabang', 'Nay Pyi Taw', 'Karlovy Vary']) {
+      expect(levelOf(name)).toBeGreaterThanOrEqual(4);
+    }
+  });
+
   it('is the same list the multiplayer server uses', () => {
     expect(backendCities.CITIES).toEqual(CITIES);
   });

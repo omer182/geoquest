@@ -36,13 +36,16 @@ export function calculateScore(distanceKm: number, scaleKm: number = DEFAULT_SCA
 /**
  * Points needed over a level's 5 rounds (max 5,000) to advance.
  *
- * Calibrated by simulating a casual player (knows fewer cities, less precisely,
- * otherwise guesses roughly inside the right country) over random 5-city draws:
- * they pass level 1 ~85% of the time, sliding to ~30% at level 10. A player who
- * knows their geography passes level 1 every time and level 10 about 2 in 3.
- * Targets never rise as levels go up because the cities get much harder to place.
+ * Calibrated by simulating players over random 5-city draws:
+ * - Levels 1-3 (hand-picked famous cities) against a player with basic
+ *   knowledge: they pass about 90% / 85% / 85%, so ~3 in 4 reach level 3 on
+ *   their first run.
+ * - Levels 4-10 against a casual player, sliding to ~30% at level 10.
+ * A player who knows their geography passes levels 1-6 almost always and
+ * level 10 about 2 in 3. Targets never rise as levels go up because the
+ * cities get much harder to place.
  */
-const LEVEL_THRESHOLDS = [3150, 2600, 2600, 2600, 2400, 2400, 2400, 2200, 1800, 1400];
+const LEVEL_THRESHOLDS = [2900, 2450, 2450, 2450, 2450, 2450, 2350, 2250, 1800, 1300];
 
 /**
  * @param level The current level number (1-based). Levels past 10 keep level 10's target.
