@@ -3,9 +3,10 @@
  *
  * The data lives in cities.json so both sides read the exact same list; the
  * frontend imports the JSON directly. Each city has:
- *   - level   (1-10): difficulty bucket, assigned by simulated expected score
- *                     (how obscure the city is and how hard it is to place
- *                     inside its country)
+ *   - level   (1-10): levels 1-3 are hand-picked famous cities (basic knowledge
+ *                     is enough); levels 4-10 are the rest, ordered by simulated
+ *                     expected score (how obscure the city is and how hard it
+ *                     is to place inside its country)
  *   - scaleKm       : score decay distance, proportional to the size of the
  *                     city's country (see utils/scoring.js)
  *

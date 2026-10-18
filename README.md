@@ -239,10 +239,11 @@ geoquest/
 - The decay scale grows with the size of the city's country (the prompt always names the
   country), so precision counts about the same everywhere, with a floor so small countries
   aren't brutal.
-- `backend/data/cities.json` is the single city list for client and server. Each city's
-  `level` comes from a simulation of its expected score (how obscure it is and how hard it
-  is to place inside its country), and level targets are calibrated so a casual player
-  passes level 1 about 85% of the time and level 10 about 30%.
+- `backend/data/cities.json` is the single city list for client and server. Levels 1-3 are
+  hand-picked famous cities, so basic knowledge gets you to level 3; levels 4-10 are ordered by
+  a simulation of each city's expected score (how obscure it is and how hard it is to place
+  inside its country). Targets are calibrated so a player with basic knowledge passes levels
+  1-3 about 85-90% of the time, and a casual player passes level 10 about 30%.
 
 ## Contributing
 
