@@ -91,13 +91,13 @@ describe('Game Integration', () => {
   it('should show the start screen in READY state', () => {
     renderGame();
 
-    expect(screen.getByRole('button', { name: /start game/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /start level 1/i })).toBeInTheDocument();
     expect(screen.queryByText('Drop pin')).not.toBeInTheDocument();
   });
 
   it('should display round info and city prompt in GUESSING state', () => {
     renderGame();
-    fireEvent.click(screen.getByRole('button', { name: /start game/i }));
+    fireEvent.click(screen.getByRole('button', { name: /start level 1/i }));
     finishIntroAnimations();
 
     // GameInfoCard shows round and level
@@ -110,7 +110,7 @@ describe('Game Integration', () => {
 
   it('should show confirm button only once a pin is placed on the map', () => {
     renderGame();
-    fireEvent.click(screen.getByRole('button', { name: /start game/i }));
+    fireEvent.click(screen.getByRole('button', { name: /start level 1/i }));
     finishIntroAnimations();
 
     expect(screen.queryByRole('button', { name: /confirm guess/i })).not.toBeInTheDocument();
@@ -123,7 +123,7 @@ describe('Game Integration', () => {
 
   it('should transition to ROUND_COMPLETE with the score after confirming guess', () => {
     renderGame();
-    fireEvent.click(screen.getByRole('button', { name: /start game/i }));
+    fireEvent.click(screen.getByRole('button', { name: /start level 1/i }));
     finishIntroAnimations();
 
     pin.city = TEST_CITIES[0];
@@ -137,7 +137,7 @@ describe('Game Integration', () => {
 
   it('should progress through 5 rounds before showing level complete', () => {
     renderGame();
-    fireEvent.click(screen.getByRole('button', { name: /start game/i }));
+    fireEvent.click(screen.getByRole('button', { name: /start level 1/i }));
     finishIntroAnimations();
 
     for (let round = 1; round <= 4; round++) {
@@ -151,9 +151,43 @@ describe('Game Integration', () => {
     expect(screen.getByText(/level complete!/i)).toBeInTheDocument();
   });
 
+  it('awards stars, saves progress, and returns to the journey map with the next level', () => {
+    renderGame();
+    fireEvent.click(screen.getByRole('button', { name: /start level 1/i }));
+    finishIntroAnimations();
+    for (let round = 1; round <= 5; round++) playRound(round);
+
+    // Five perfect pins (+ streak bonuses) earn all three stars and unlock level 2
+    expect(screen.getAllByRole('img', { name: '3 of 3 stars' }).length).toBeGreaterThan(0);
+    expect(screen.getByText(/level 2 unlocked!/i)).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem('geoquest:solo-progress') || '{}')).toEqual({ level: 2, stars: { 1: 3 } });
+
+    fireEvent.click(screen.getByRole('button', { name: /^continue$/i }));
+    expect(screen.getByRole('button', { name: /play level 2/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /level 1, 3 stars/i })).toBeInTheDocument();
+  });
+
+  it('lights an "on fire" streak with a bonus from the third excellent guess', () => {
+    renderGame();
+    fireEvent.click(screen.getByRole('button', { name: /start level 1/i }));
+    finishIntroAnimations();
+
+    for (let round = 1; round <= 2; round++) playRound(round);
+    expect(screen.queryByText(/on fire/i)).not.toBeInTheDocument();
+
+    pin.city = TEST_CITIES[2];
+    fireEvent.click(screen.getByText('Drop pin'));
+    fireEvent.click(screen.getByRole('button', { name: /confirm guess/i }));
+    expect(screen.getByText(/on fire ×3/i)).toBeInTheDocument();
+    expect(screen.getByText('+100')).toBeInTheDocument();
+    // The round score still shows the base points; the bonus goes into the total
+    expect(screen.getByLabelText('1,000 points')).toBeInTheDocument();
+    expect(screen.getByText('3,100')).toBeInTheDocument();
+  });
+
   it('should show level failed screen when the score is below the threshold', () => {
     renderGame();
-    fireEvent.click(screen.getByRole('button', { name: /start game/i }));
+    fireEvent.click(screen.getByRole('button', { name: /start level 1/i }));
     finishIntroAnimations();
 
     pin.onTarget = false;
@@ -161,7 +195,8 @@ describe('Game Integration', () => {
       playRound(round);
     }
 
-    expect(screen.getByText(/level failed/i)).toBeInTheDocument();
+    expect(screen.getByText(/not this time/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
   });
 });
 

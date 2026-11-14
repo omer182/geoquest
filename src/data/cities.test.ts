@@ -28,7 +28,8 @@ describe('city database', () => {
   it('has balanced levels with broad geographic spread', () => {
     for (let level = 1; level <= MAX_LEVEL; level++) {
       const pool = getCitiesForLevel(level);
-      expect(pool.length).toBeGreaterThanOrEqual(50);
+      // Level 1 is a deliberately short list of the most famous cities
+      expect(pool.length).toBeGreaterThanOrEqual(level === 1 ? 40 : 50);
       expect(new Set(pool.map(c => c.country)).size).toBeGreaterThanOrEqual(15);
     }
   });

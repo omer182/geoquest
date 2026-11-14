@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
-import { MAX_ROUND_SCORE } from '../utils/scoring';
+import { useEffect, useRef, useState } from 'react';
+import confetti from 'canvas-confetti';
+import { MAX_ROUND_SCORE, STREAK_MIN } from '../utils/scoring';
+import { sfx } from '../utils/sound';
 
 /**
  * Props for the RoundResults component
@@ -29,6 +31,12 @@ interface RoundResultsProps {
    * Callback function triggered when the continue button is clicked
    */
   onContinue: () => void;
+
+  /** Streak bonus earned this round, on top of `score` */
+  bonus?: number;
+
+  /** Consecutive excellent guesses including this one */
+  streak?: number;
 }
 
 /**
@@ -43,36 +51,70 @@ function formatNumber(num: number): string {
  * because scoring is scaled to the country: 40 km off is great in Russia but
  * poor in Israel.
  */
-export function getGuessRating(score: number): { label: string; emoji: string; color: string } {
-  if (score >= 950) return { label: 'Bullseye!', emoji: '🎯', color: 'text-moss' };
-  if (score >= 800) return { label: 'Excellent!', emoji: '🔥', color: 'text-moss' };
-  if (score >= 600) return { label: 'Great guess', emoji: '👏', color: 'text-sea-deep' };
-  if (score >= 300) return { label: 'Not bad', emoji: '🙂', color: 'text-brass' };
-  return { label: 'Way off', emoji: '🧭', color: 'text-compass' };
+export function getGuessRating(score: number): { label: string; color: string } {
+  if (score >= 950) return { label: 'Bullseye!', color: 'text-moss' };
+  if (score >= 800) return { label: 'Excellent!', color: 'text-moss' };
+  if (score >= 600) return { label: 'Great guess', color: 'text-sea-deep' };
+  if (score >= 300) return { label: 'Not bad', color: 'text-brass' };
+  return { label: 'Way off', color: 'text-compass' };
+}
+
+/** Small confetti burst above the results card for a close pin. */
+function celebrateGuess(bullseye: boolean) {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  confetti({
+    particleCount: bullseye ? 90 : 45,
+    spread: bullseye ? 100 : 70,
+    startVelocity: bullseye ? 38 : 28,
+    origin: { x: 0.5, y: 0.72 },
+    colors: ['#C8553D', '#C9962B', '#4E8B5A', '#2F6F9A'],
+    scalar: 0.8,
+    zIndex: 45,
+  });
+}
+
+function FlameIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+      <path d="M12 2c1 3.5 5 6 5 11a5 5 0 0 1-10 0c0-2.2 1-3.8 2.2-5 .2 1.6 1 2.8 2.3 3.3C11 8.6 11 5.2 12 2z" />
+    </svg>
+  );
 }
 
 /**
  * Animates a number from 0 to `target`. Skipped when the user prefers reduced motion
  * (and in environments without matchMedia, e.g. tests).
  */
-function useCountUp(target: number, durationMs = 700): number {
+function useCountUp(target: number, durationMs = 700, onTick?: (progress: number) => void, onDone?: () => void): number {
   const animate =
     typeof window !== 'undefined' &&
     typeof window.matchMedia === 'function' &&
     !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const [value, setValue] = useState(animate ? 0 : target);
+  const onTickRef = useRef(onTick);
+  const onDoneRef = useRef(onDone);
+  onTickRef.current = onTick;
+  onDoneRef.current = onDone;
 
   useEffect(() => {
     if (!animate || target === 0) {
       setValue(target);
+      onDoneRef.current?.();
       return;
     }
     let frame = 0;
+    let lastTick = 0;
     const start = performance.now();
     const tick = (now: number) => {
       const t = Math.min((now - start) / durationMs, 1);
       setValue(Math.round(target * (1 - Math.pow(1 - t, 3)))); // ease-out cubic
+      if (now - lastTick > 55 && t < 1) {
+        lastTick = now;
+        onTickRef.current?.(t);
+      }
       if (t < 1) frame = requestAnimationFrame(tick);
+      else onDoneRef.current?.();
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
@@ -101,9 +143,14 @@ function useCountUp(target: number, durationMs = 700): number {
  * />
  * ```
  */
-export default function RoundResults({ distance, score, cityName, country, onContinue }: RoundResultsProps) {
+export default function RoundResults({ distance, score, cityName, country, onContinue, bonus = 0, streak = 0 }: RoundResultsProps) {
   const rating = getGuessRating(score);
-  const displayedScore = useCountUp(score);
+  const onFire = streak >= STREAK_MIN;
+  const displayedScore = useCountUp(score, 700, sfx.tick, () => {
+    sfx.verdict(score);
+    if (score >= 800) celebrateGuess(score >= 950);
+    if (onFire) setTimeout(() => sfx.streak(streak), 450);
+  });
 
   // Colour by share of the max points
   let scoreColor: string;
@@ -131,7 +178,6 @@ export default function RoundResults({ distance, score, cityName, country, onCon
           <div
             className={`inline-block animate-stamp rounded-md border-2 border-current px-2 py-0.5 text-xs font-extrabold uppercase tracking-[0.15em] ${rating.color}`}
           >
-            <span aria-hidden="true">{rating.emoji} </span>
             {rating.label}
           </div>
 
@@ -150,6 +196,17 @@ export default function RoundResults({ distance, score, cityName, country, onCon
             {score > 0 ? '+' : ''}
             {formatNumber(displayedScore)} pts
           </div>
+
+          {/* Streak badge */}
+          {onFire && (
+            <div className="mb-2 flex justify-center">
+              <span className="animate-pop inline-flex items-center gap-1.5 rounded-full bg-compass px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-paper shadow-md">
+                <FlameIcon />
+                On fire ×{streak}
+                {bonus > 0 && <span className="tabular-nums text-paper/85">+{formatNumber(bonus)}</span>}
+              </span>
+            </div>
+          )}
 
           {/* Next Round button */}
           <div className="flex justify-center">

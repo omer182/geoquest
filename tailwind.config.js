@@ -147,6 +147,29 @@ export default {
           '0%': { transform: 'translate3d(0, 0, 0)' },
           '100%': { transform: 'translate3d(-33.3333%, 0, 0)' },
         },
+        'pop': {
+          '0%': { opacity: '0', transform: 'scale(0.4)' },
+          '60%': { opacity: '1', transform: 'scale(1.15)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        'star-land': {
+          '0%': { opacity: '0', transform: 'scale(2.6) rotate(-25deg)' },
+          '55%': { opacity: '1', transform: 'scale(0.85) rotate(6deg)' },
+          '75%': { transform: 'scale(1.12) rotate(-2deg)' },
+          '100%': { opacity: '1', transform: 'scale(1) rotate(0deg)' },
+        },
+        'banner-in': {
+          '0%': { opacity: '0', transform: 'translateY(12px) scale(0.9)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        'node-pulse': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.55' },
+          '50%': { transform: 'scale(1.5)', opacity: '0' },
+        },
+        'bob': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-5px)' },
+        },
         'stamp': {
           '0%': { opacity: '0', transform: 'scale(1.6) rotate(-8deg)' },
           '60%': { opacity: '1', transform: 'scale(0.95) rotate(-3deg)' },
@@ -163,6 +186,11 @@ export default {
         'float': 'float 3s ease-in-out infinite',
         'drift': 'drift 240s linear infinite',
         'stamp': 'stamp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'pop': 'pop 0.45s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'star-land': 'star-land 0.6s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'banner-in': 'banner-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'node-pulse': 'node-pulse 1.8s ease-out infinite',
+        'bob': 'bob 1.6s ease-in-out infinite',
       },
     },
     // Mobile-first breakpoints

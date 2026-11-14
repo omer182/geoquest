@@ -70,7 +70,7 @@ describe('GameSession ranking', () => {
     session.startRound();
     // ~100 km from Paris
     const result = session.addGuess('fast', { lat: 49.75, lng: 2.35 }, Date.now());
-    expect(result.score).toBeGreaterThan(750);
-    expect(result.score).toBeLessThan(830);
+    expect(result.score).toBeGreaterThan(830);
+    expect(result.score).toBeLessThan(900);
   });
 });

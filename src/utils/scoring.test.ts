@@ -26,10 +26,10 @@ describe('calculateScore', () => {
   });
 
   it('matches the documented examples for a mid-size country', () => {
-    expect(calculateScore(50, 450)).toBe(915);
-    expect(calculateScore(150, 450)).toBe(733);
-    expect(calculateScore(300, 450)).toBe(525);
-    expect(calculateScore(600, 450)).toBe(270);
+    expect(calculateScore(50, 450)).toBe(957);
+    expect(calculateScore(150, 450)).toBe(801);
+    expect(calculateScore(300, 450)).toBe(613);
+    expect(calculateScore(600, 450)).toBe(360);
   });
 
   it('scales with the size of the country', () => {
@@ -37,7 +37,7 @@ describe('calculateScore', () => {
     const big = calculateScore(100, 1000);
     const small = calculateScore(100, 50);
     expect(big).toBeGreaterThan(900);
-    expect(small).toBeLessThan(200);
+    expect(small).toBeLessThan(350);
   });
 
   it('never goes below 0 or above the maximum', () => {

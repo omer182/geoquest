@@ -1,10 +1,13 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useGame } from '../context/GameContext';
 import { GameStatus } from '../types/game';
 import { selectCitiesForLevel } from '../data/cities';
 import { calculateDistance } from '../utils/distance';
-import { calculateScore, getLevelThreshold } from '../utils/scoring';
-import { loadSavedLevel, saveReachedLevel, clearProgress } from '../utils/progress';
+import { calculateScore, getLevelThreshold, getLevelStars, STREAK_SCORE, STREAK_MIN, STREAK_BONUS } from '../utils/scoring';
+import { loadProgress, recordLevelPassed, clearProgress, type SoloProgress } from '../utils/progress';
+import { sfx } from '../utils/sound';
+import JourneyMap from './JourneyMap';
+import MuteButton from './MuteButton';
 import { useSocket } from '../hooks/useSocket';
 import { useSocketEvent } from '../hooks/useSocketEvent';
 import { SOCKET_EVENTS } from '../types/socket-events';
@@ -21,7 +24,6 @@ import WaitingIndicator from './WaitingIndicator';
 import MultiplayerRoundResults from './MultiplayerRoundResults';
 import MultiplayerGameComplete from './MultiplayerGameComplete';
 import DisconnectedPlayerModal from './DisconnectedPlayerModal';
-import AtlasScreen, { AtlasHeading } from './ui/AtlasScreen';
 
 interface GameProps {
   /** Callback to navigate back to main menu */
@@ -65,6 +67,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
    */
   const handlePinPlaced = (position: { lat: number; lng: number }) => {
     setCurrentGuess(position);
+    if (state.gameMode === 'single-player') sfx.pin();
   };
 
   /**
@@ -108,6 +111,9 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
       // 0-1000, scaled to the size of the city's country (see utils/scoring)
       const score = calculateScore(distance, currentCity.scaleKm);
 
+      // Streak: from the STREAK_MIN-th excellent guess in a row, each one earns a bonus
+      const bonus = score >= STREAK_SCORE && state.streak + 1 >= STREAK_MIN ? STREAK_BONUS : 0;
+
       // Dispatch SUBMIT_GUESS action to update game state
       dispatch({
         type: 'SUBMIT_GUESS',
@@ -115,6 +121,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
           guess: currentGuess,
           distance,
           score,
+          bonus,
         },
       });
 
@@ -136,27 +143,6 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
     setShowLevelAnnouncement(true); // Show level announcement
     setShowAnimatedPrompt(false); // City animation comes after
     setAnimationCompleted(false); // Reset animation state to prevent static prompt from flashing
-  };
-
-  /**
-   * Handle advancing to next level after passing current level.
-   */
-  const handleAdvanceLevel = () => {
-    const nextLevel = state.currentLevel + 1;
-    const cities = selectCitiesForLevel(nextLevel);
-
-    dispatch({
-      type: 'ADVANCE_LEVEL',
-      payload: { cities },
-    });
-
-    // Reset map
-    setMapKey(prev => prev + 1);
-    setCurrentGuess(null);
-    // Show level announcement when advancing to next level
-    setShowLevelAnnouncement(true);
-    setShowAnimatedPrompt(false); // City animation comes after
-    setAnimationCompleted(false); // Reset animation state
   };
 
   /**
@@ -567,31 +553,43 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
     state.gameStatus === GameStatus.LEVEL_COMPLETE &&
     state.totalScore < getLevelThreshold(state.currentLevel);
 
-  // Persist solo progress: passing a level unlocks resuming at the next one.
+  // Record a finished solo level once: stars, best, and whether it unlocked a new level.
+  // (computed into a ref so StrictMode's double effect run can't record it twice)
+  const [levelResult, setLevelResult] = useState<{ stars: number; unlocked: boolean; newBest: boolean } | null>(null);
+  const levelResultRef = useRef<{ stars: number; unlocked: boolean; newBest: boolean } | null>(null);
   useEffect(() => {
-    if (state.gameMode === 'single-player' && levelPassed) {
-      saveReachedLevel(state.currentLevel + 1);
+    if (state.gameMode !== 'single-player' || state.gameStatus !== GameStatus.LEVEL_COMPLETE) {
+      levelResultRef.current = null;
+      setLevelResult(null);
+      return;
     }
-  }, [state.gameMode, levelPassed, state.currentLevel]);
+    if (!levelResultRef.current) {
+      const stars = getLevelStars(state.totalScore, getLevelThreshold(state.currentLevel));
+      levelResultRef.current =
+        stars === 0 ? { stars: 0, unlocked: false, newBest: false } : { stars, ...recordLevelPassed(state.currentLevel, stars) };
+    }
+    setLevelResult(levelResultRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.gameMode, state.gameStatus]);
 
-  // Saved resume level, re-read whenever the solo start screen is shown.
-  const [savedLevel, setSavedLevel] = useState(1);
-  const [confirmingRestart, setConfirmingRestart] = useState(false);
+  // Journey map: saved progress (re-read whenever the map shows) and the level the pin walks from.
+  const [progress, setProgress] = useState<SoloProgress>(() => loadProgress());
+  const [walkFrom, setWalkFrom] = useState<number | null>(null);
   useEffect(() => {
-    if (state.gameStatus === GameStatus.READY) {
-      setSavedLevel(loadSavedLevel());
-      setConfirmingRestart(false);
-    }
+    if (state.gameStatus === GameStatus.READY) setProgress(loadProgress());
   }, [state.gameStatus]);
 
   const handleStartOver = () => {
-    if (!confirmingRestart) {
-      setConfirmingRestart(true);
-      return;
-    }
     clearProgress();
-    setSavedLevel(1);
-    handleStartGame(1);
+    setWalkFrom(null);
+    setProgress(loadProgress());
+  };
+
+  const backToJourney = (walk: boolean) => {
+    setWalkFrom(walk ? state.currentLevel : null);
+    setShowLevelAnnouncement(false);
+    setShowAnimatedPrompt(false);
+    dispatch({ type: 'RESET_GAME' });
   };
 
   // Update gameStatus to LEVEL_FAILED if needed (this would normally be in reducer)
@@ -605,43 +603,20 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
     return (
       <div className="h-screen bg-paper-deep flex flex-col relative overflow-hidden">
       <div className="relative z-10 flex flex-col h-full overflow-hidden">
-      {/* READY State: Initial start screen */}
+      {/* READY State: journey map */}
       {state.gameStatus === GameStatus.READY && state.gameMode === 'single-player' && (
         <div className="flex-1 min-h-0">
-          <AtlasScreen>
-            <AtlasHeading eyebrow="Single player" title="Solo Run" subtitle="Beat levels to master geography!" />
-            <div className="atlas-card p-5">
-              <ul className="mb-4 space-y-1.5 text-sm text-ink-soft">
-                <li className="flex gap-2"><span aria-hidden="true">📍</span>Pin each city as close as you can</li>
-                <li className="flex gap-2"><span aria-hidden="true">🎯</span>5 rounds per level, hit the target score</li>
-                <li className="flex gap-2"><span aria-hidden="true">🏔️</span>10 levels, from capitals to hidden gems</li>
-              </ul>
-              <div className="space-y-2">
-                {savedLevel > 1 ? (
-                  <>
-                    <button onClick={() => handleStartGame(savedLevel)} className="btn btn-accent btn-block">
-                      Continue · Level {savedLevel}
-                    </button>
-                    <button
-                      onClick={handleStartOver}
-                      className={`btn btn-block ${confirmingRestart ? 'btn-primary' : 'btn-secondary'}`}
-                    >
-                      {confirmingRestart ? 'Tap again to reset progress' : 'Start Over from Level 1'}
-                    </button>
-                  </>
-                ) : (
-                  <button onClick={() => handleStartGame(1)} className="btn btn-accent btn-block">
-                    Start Game
-                  </button>
-                )}
-                {onBackToMainMenu && (
-                  <button onClick={onBackToMainMenu} className="btn btn-ghost btn-block text-sm">
-                    Main Menu
-                  </button>
-                )}
-              </div>
-            </div>
-          </AtlasScreen>
+          <JourneyMap
+            key={`${progress.level}-${walkFrom ?? ''}`}
+            progress={progress}
+            walkFrom={walkFrom}
+            onPlay={level => {
+              setWalkFrom(null);
+              handleStartGame(level);
+            }}
+            onStartOver={handleStartOver}
+            onMainMenu={onBackToMainMenu}
+          />
         </div>
       )}
 
@@ -692,7 +667,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                   totalScore={state.totalScore}
                   requiredScore={getLevelThreshold(state.currentLevel)}
                 />
-                
+                <MuteButton className="mt-2" />
               </div>
             )}
 
@@ -776,7 +751,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                   }}
                 />
               ) : animationCompleted ? (
-                <div className="absolute top-[5.5rem] left-4 sm:top-4 sm:left-auto sm:right-4 z-20">
+                <div className="absolute top-4 right-4 z-20">
                   <CityPrompt cityName={currentCity.name} country={currentCity.country} />
                 </div>
               ) : null
@@ -789,7 +764,9 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
               state.currentDistance !== null && (
                 <RoundResults
                   distance={state.currentDistance}
-                  score={state.roundScores[state.roundScores.length - 1] || 0}
+                  score={(state.roundScores[state.roundScores.length - 1] || 0) - state.lastBonus}
+                  bonus={state.lastBonus}
+                  streak={state.streak}
                   cityName={currentCity.name}
                   country={currentCity.country}
                   onContinue={handleContinue}
@@ -837,11 +814,17 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
       {state.gameMode === 'single-player' && state.gameStatus === GameStatus.LEVEL_COMPLETE && (
         <div className="flex-1 flex items-center justify-center p-4">
           <LevelComplete
+            key={`${state.currentLevel}-${levelResult ? 'r' : 'p'}`}
+            level={state.currentLevel}
             totalScore={state.totalScore}
             threshold={getLevelThreshold(state.currentLevel)}
             passed={levelPassed}
-            onNextLevel={handleAdvanceLevel}
+            stars={levelResult?.stars ?? 0}
+            unlocked={levelResult?.unlocked ?? false}
+            newBest={levelResult?.newBest ?? false}
+            onNextLevel={() => backToJourney(levelResult?.unlocked ?? false)}
             onRetryLevel={handleRestartLevel}
+            onJourneyMap={() => backToJourney(false)}
             onMainMenu={() => {
               // Reset single-player game state to READY
               dispatch({ type: 'RESET_GAME' });
@@ -888,9 +871,10 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
         )}
 
       {/* Level Announcement Overlay (single-player only) - Don't show when level complete screen is visible */}
-      {state.gameMode === 'single-player' && 
-       showLevelAnnouncement && 
-       state.gameStatus !== GameStatus.LEVEL_COMPLETE && (
+      {state.gameMode === 'single-player' &&
+       showLevelAnnouncement &&
+       state.gameStatus !== GameStatus.LEVEL_COMPLETE &&
+       state.gameStatus !== GameStatus.READY && (
         <LevelAnnouncement
           level={state.currentLevel}
           round={state.currentRound}

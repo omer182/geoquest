@@ -153,6 +153,12 @@ export interface GameState {
 
   /** Multiplayer-specific game state (null in single-player mode) */
   multiplayerGameState: MultiplayerGameState | null;
+
+  /** Consecutive excellent guesses in the current solo run (resets on a weaker guess) */
+  streak: number;
+
+  /** Streak bonus included in the last round's score (0 if none) */
+  lastBonus: number;
 }
 
 /**
@@ -176,6 +182,8 @@ export interface SubmitGuessAction {
     guess: Guess;
     distance: number;
     score: number;
+    /** Streak bonus earned on top of the score */
+    bonus?: number;
   };
 }
 

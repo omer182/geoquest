@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { GameState, GameAction, GameStatus } from '../types/game';
+import { STREAK_SCORE } from '../utils/scoring';
 
 /**
  * Initial game state before any game has started.
@@ -20,6 +21,8 @@ const initialState: GameState = {
   currentPlayer: null,
   difficulty: 'medium',
   multiplayerGameState: null,
+  streak: 0,
+  lastBonus: 0,
 };
 
 /**
@@ -52,13 +55,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case 'SUBMIT_GUESS': {
       const { guess, distance, score } = action.payload;
+      const bonus = action.payload.bonus ?? 0;
       const currentCity = state.selectedCities[state.currentRound - 1];
 
       return {
         ...state,
         userGuesses: [...state.userGuesses, guess],
-        roundScores: [...state.roundScores, score],
-        totalScore: state.totalScore + score,
+        roundScores: [...state.roundScores, score + bonus],
+        totalScore: state.totalScore + score + bonus,
+        streak: score >= STREAK_SCORE ? state.streak + 1 : 0,
+        lastBonus: bonus,
         gameStatus: GameStatus.ROUND_COMPLETE,
         currentDistance: distance,
         currentCityLocation: currentCity
@@ -110,6 +116,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'RETRY_LEVEL': {
       return {
         ...state,
+        streak: 0,
+        lastBonus: 0,
         currentRound: 1,
         selectedCities: action.payload.cities,
         userGuesses: [],
