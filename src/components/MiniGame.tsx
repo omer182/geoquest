@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { Star } from './ui/Star';
 import MuteButton from './MuteButton';
-import { useCountries, type CountryFeature, type Ring } from '../utils/countryShapes';
+import { useShapes, type CountryFeature, type Ring } from '../utils/countryShapes';
 import { getPaintStars, MAX_MISTAKES, PAINT_GOAL, type Region } from '../data/regions';
 import { recordMiniGame } from '../utils/progress';
 import { sfx } from '../utils/sound';
@@ -102,7 +102,7 @@ function Heart({ full }: { full: boolean }) {
  * wrong tap ends the game. Stars depend on mistakes.
  */
 export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProps) {
-  const countries = useCountries();
+  const countries = useShapes(region.source);
   const projected = useMemo(() => (countries ? projectRegion(region, countries) : null), [countries, region]);
   const viewH = projected?.viewH ?? 700;
 
@@ -226,10 +226,11 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
     return { s, cx, cy };
   };
 
-  /** Opening view: zoomed in so the region fills more of the screen (up to 1.7x). */
+  /** Opening view: zoomed in (up to 1.7x) when the region would otherwise float in empty sea. */
   function initialView(): View {
     const slack = Math.max(base.w / VIEW_W, base.h / viewH);
-    return clampView({ s: Math.min(slack, 1.7), cx: VIEW_W / 2, cy: viewH / 2 });
+    // Only zoom when there is lots of empty sea around the region; tall regions stay whole
+    return clampView({ s: slack < 1.5 ? 1 : Math.min(slack, 1.7), cx: VIEW_W / 2, cy: viewH / 2 });
   }
   // Re-fit when the map loads or the screen changes shape, until the player moves it
   const userMoved = useRef(false);
@@ -357,7 +358,7 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
               {phase === 'playing' ? `Paint ${Math.min(step + 1, goal)} of ${goal}` : region.name}
             </div>
             <div className="truncate font-display text-lg font-bold leading-tight text-ink sm:text-xl" aria-live="polite">
-              {phase === 'playing' && target ? target.name : `Paint ${region.name === 'The Americas' ? 'the Americas' : region.name}`}
+              {phase === 'playing' && target ? target.name : region.title}
             </div>
           </div>
           <div className="flex shrink-0 gap-0.5" aria-label={`${hearts - mistakes} of ${hearts} lives left`} role="img">
@@ -470,9 +471,9 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
             {phase === 'intro' && (
               <>
                 <div className="atlas-eyebrow mb-1">Bonus stop</div>
-                <h2 className="font-display text-3xl font-bold text-ink">Paint {region.name === 'The Americas' ? 'the Americas' : region.name}</h2>
+                <h2 className="font-display text-3xl font-bold text-ink">{region.title}</h2>
                 <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-                  We call a country, you tap it to paint it in. Paint {PAINT_GOAL} to colour the whole region. {hearts} wrong taps
+                  We call a {region.source === 'us-states' ? 'state' : 'country'}, you tap it to paint it in. Paint {PAINT_GOAL} to colour the whole region. {hearts} wrong taps
                   and you&apos;re out.
                 </p>
                 <div className="mt-3 flex justify-center gap-1 text-paper-line">

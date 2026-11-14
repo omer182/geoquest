@@ -21,7 +21,7 @@ const FAKE: CountryFeature[] = ISO.map((iso, i) => {
     polygons: [[[[lng, lat], [lng + 6, lat], [lng + 6, lat + 6], [lng, lat + 6], [lng, lat]]]],
   };
 });
-vi.mock('../utils/countryShapes', () => ({ useCountries: () => FAKE }));
+vi.mock('../utils/countryShapes', () => ({ useShapes: () => FAKE }));
 
 const region = getRegion('middle-east');
 
@@ -85,10 +85,20 @@ describe('MiniGame', () => {
 });
 
 describe('regions', () => {
-  it('only lists country codes that exist in the bundled map data', () => {
-    const geo = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../assets/geo/countries-low.geojson'), 'utf8'));
-    const codes = new Set(geo.features.map((f: { properties: { ISO_A2_EH: string } }) => f.properties.ISO_A2_EH));
-    for (const r of REGIONS) for (const c of r.codes) expect(codes.has(c), `${r.id}: ${c}`).toBe(true);
+  it('only lists codes that exist in the bundled map data', () => {
+    const read = (f: string) => JSON.parse(fs.readFileSync(path.resolve(__dirname, '../assets/geo', f), 'utf8'));
+    const countries = new Set(read('countries-low.geojson').features.map((f: { properties: { ISO_A2_EH: string } }) => f.properties.ISO_A2_EH));
+    const states = new Set(read('us-states.geojson').features.map((f: { properties: { NAME: string } }) => f.properties.NAME));
+    for (const r of REGIONS) {
+      const known = r.source === 'us-states' ? states : countries;
+      for (const c of r.codes) expect(known.has(c), `${r.id}: ${c}`).toBe(true);
+    }
+  });
+
+  it('has enough paintable places in every region and one bonus stop per gap', () => {
+    for (const r of REGIONS) expect(r.codes.length, r.id).toBeGreaterThanOrEqual(PAINT_GOAL);
+    const gaps = REGIONS.map(r => r.afterLevel);
+    expect(new Set(gaps).size).toBe(gaps.length);
   });
 
   it('gives 3/2/1 stars for 0/1/2 mistakes and none for a loss', () => {

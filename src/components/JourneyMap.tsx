@@ -451,8 +451,17 @@ export default function JourneyMap({ progress, walkFrom, onPlay, onPlayBonus, on
 
             {/* Zone signposts */}
             {ZONES.map(z => {
-              const y = zoneBottom(z) - (z.from === 0 ? 34 : 22);
-              const x = NODES[z.from].x > W / 2 ? 62 : W - 62;
+              // Put the sign wherever near the zone edge is farthest from any stop, its stars or its label
+              const stops = [
+                ...NODES,
+                ...NODES.map(n => ({ x: n.x, y: n.y + 22 })),
+                ...BONUS.map(b => b.pos),
+                ...BONUS.map(b => ({ x: b.pos.x, y: b.pos.y + 32 })),
+              ];
+              const yBase = zoneBottom(z) - (z.from === 0 ? 34 : 22);
+              const spots = [62, W - 62].flatMap(sx => [0, 26, -26].map(dy => ({ x: sx, y: yBase + dy })));
+              const room = (s: Pt) => Math.min(...stops.map(p => Math.hypot((p.x - s.x) * 0.6, p.y - s.y)));
+              const { x, y } = spots.reduce((best, s) => (room(s) > room(best) ? s : best));
               return (
                 <g key={z.name} transform={`translate(${x},${y})`}>
                   <rect x="-2" y="2" width="4" height="16" fill="#8A6A44" />
