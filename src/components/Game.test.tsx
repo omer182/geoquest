@@ -78,6 +78,7 @@ const playRound = (round: number) => {
  */
 describe('Game Integration', () => {
   beforeEach(() => {
+    localStorage.clear();
     vi.useFakeTimers();
     pin.onTarget = true;
     pin.city = null;

@@ -33,13 +33,14 @@ const initialState: GameState = {
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'START_GAME': {
+      const startLevel = action.payload.level ?? 1;
       return {
         ...initialState,
         selectedCities: action.payload.cities,
         gameStatus: GameStatus.GUESSING,
-        currentLevel: 1,
+        currentLevel: startLevel,
         currentRound: 1,
-        highestLevel: 1,
+        highestLevel: startLevel,
         // Preserve multiplayer state
         gameMode: state.gameMode,
         currentRoom: state.currentRoom,

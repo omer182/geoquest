@@ -162,6 +162,8 @@ export interface StartGameAction {
   type: 'START_GAME';
   payload: {
     cities: City[];
+    /** Level to start at (defaults to 1; used to resume saved solo progress) */
+    level?: number;
   };
 }
 

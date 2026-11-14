@@ -4,6 +4,7 @@ import { GameStatus } from '../types/game';
 import { selectCitiesForLevel } from '../data/cities';
 import { calculateDistance } from '../utils/distance';
 import { calculateScore, getLevelThreshold } from '../utils/scoring';
+import { loadSavedLevel, saveReachedLevel, clearProgress } from '../utils/progress';
 import { useSocket } from '../hooks/useSocket';
 import { useSocketEvent } from '../hooks/useSocketEvent';
 import { SOCKET_EVENTS } from '../types/socket-events';
@@ -181,13 +182,15 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   /**
    * Handle starting the game from READY state.
    */
-  const handleStartGame = () => {
-    const cities = selectCitiesForLevel(1);
+  const handleStartGame = (level: number = 1) => {
+    const cities = selectCitiesForLevel(level);
 
     dispatch({
       type: 'START_GAME',
-      payload: { cities },
+      payload: { cities, level },
     });
+    setMapKey(prev => prev + 1);
+    setCurrentGuess(null);
     setShowLevelAnnouncement(true); // Show level announcement first
     setShowAnimatedPrompt(false); // City animation comes after
   };
@@ -564,6 +567,33 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
     state.gameStatus === GameStatus.LEVEL_COMPLETE &&
     state.totalScore < getLevelThreshold(state.currentLevel);
 
+  // Persist solo progress: passing a level unlocks resuming at the next one.
+  useEffect(() => {
+    if (state.gameMode === 'single-player' && levelPassed) {
+      saveReachedLevel(state.currentLevel + 1);
+    }
+  }, [state.gameMode, levelPassed, state.currentLevel]);
+
+  // Saved resume level, re-read whenever the solo start screen is shown.
+  const [savedLevel, setSavedLevel] = useState(1);
+  const [confirmingRestart, setConfirmingRestart] = useState(false);
+  useEffect(() => {
+    if (state.gameStatus === GameStatus.READY) {
+      setSavedLevel(loadSavedLevel());
+      setConfirmingRestart(false);
+    }
+  }, [state.gameStatus]);
+
+  const handleStartOver = () => {
+    if (!confirmingRestart) {
+      setConfirmingRestart(true);
+      return;
+    }
+    clearProgress();
+    setSavedLevel(1);
+    handleStartGame(1);
+  };
+
   // Update gameStatus to LEVEL_FAILED if needed (this would normally be in reducer)
   useEffect(() => {
     if (levelFailed && state.gameStatus === GameStatus.LEVEL_COMPLETE) {
@@ -587,9 +617,23 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
                 <li className="flex gap-2"><span aria-hidden="true">🏔️</span>10 levels, from capitals to hidden gems</li>
               </ul>
               <div className="space-y-2">
-                <button onClick={handleStartGame} className="btn btn-accent btn-block">
-                  Start Game
-                </button>
+                {savedLevel > 1 ? (
+                  <>
+                    <button onClick={() => handleStartGame(savedLevel)} className="btn btn-accent btn-block">
+                      Continue · Level {savedLevel}
+                    </button>
+                    <button
+                      onClick={handleStartOver}
+                      className={`btn btn-block ${confirmingRestart ? 'btn-primary' : 'btn-secondary'}`}
+                    >
+                      {confirmingRestart ? 'Tap again to reset progress' : 'Start Over from Level 1'}
+                    </button>
+                  </>
+                ) : (
+                  <button onClick={() => handleStartGame(1)} className="btn btn-accent btn-block">
+                    Start Game
+                  </button>
+                )}
                 {onBackToMainMenu && (
                   <button onClick={onBackToMainMenu} className="btn btn-ghost btn-block text-sm">
                     Main Menu
