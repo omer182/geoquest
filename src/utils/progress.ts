@@ -10,14 +10,21 @@ export interface SoloProgress {
   level: number;
   /** Best stars (1-3) earned per beaten level */
   stars: Record<number, number>;
+  /** Best stars (1-3) per won "paint the region" bonus game, by region id */
+  mini: Record<string, number>;
 }
 
-const EMPTY: SoloProgress = { level: 1, stars: {} };
+const empty = (): SoloProgress => ({ level: 1, stars: {}, mini: {} });
+
+const validStars = (v: unknown) => {
+  const s = Number(v);
+  return Number.isInteger(s) && s >= 1 && s <= 3 ? s : 0;
+};
 
 export function loadProgress(): SoloProgress {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { ...EMPTY, stars: {} };
+    if (!raw) return empty();
     const parsed = JSON.parse(raw) as Partial<SoloProgress>;
     const level = Number(parsed.level);
     const stars: Record<number, number> = {};
@@ -28,9 +35,13 @@ export function loadProgress(): SoloProgress {
         if (Number.isInteger(lvl) && lvl >= 1 && Number.isInteger(s) && s >= 1 && s <= 3) stars[lvl] = s;
       }
     }
-    return { level: Number.isInteger(level) && level >= 1 ? level : 1, stars };
+    const mini: Record<string, number> = {};
+    if (parsed.mini && typeof parsed.mini === 'object') {
+      for (const [k, v] of Object.entries(parsed.mini)) if (validStars(v)) mini[k] = validStars(v);
+    }
+    return { level: Number.isInteger(level) && level >= 1 ? level : 1, stars, mini };
   } catch {
-    return { ...EMPTY, stars: {} };
+    return empty();
   }
 }
 
@@ -64,10 +75,21 @@ export function recordLevelPassed(level: number, stars: number): { unlocked: boo
   const prevStars = progress.stars[level] ?? 0;
   const newBest = stars > prevStars;
   save({
+    ...progress,
     level: Math.max(progress.level, level + 1),
     stars: { ...progress.stars, [level]: Math.max(prevStars, stars) },
   });
   return { unlocked, newBest };
+}
+
+/** Records a won region game, keeping the best stars. @returns whether it beat the previous best */
+export function recordMiniGame(regionId: string, stars: number): boolean {
+  if (!validStars(stars)) return false;
+  const progress = loadProgress();
+  const prev = progress.mini[regionId] ?? 0;
+  if (stars <= prev) return false;
+  save({ ...progress, mini: { ...progress.mini, [regionId]: stars } });
+  return true;
 }
 
 export function clearProgress(): void {

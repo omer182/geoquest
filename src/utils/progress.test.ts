@@ -6,19 +6,19 @@ describe('solo progress', () => {
   beforeEach(() => localStorage.clear());
 
   it('starts at level 1 with no stars', () => {
-    expect(loadProgress()).toEqual({ level: 1, stars: {} });
+    expect(loadProgress()).toEqual({ level: 1, stars: {}, mini: {} });
   });
 
   it('reads saves from before stars existed', () => {
     localStorage.setItem('geoquest:solo-progress', JSON.stringify({ level: 4 }));
-    expect(loadProgress()).toEqual({ level: 4, stars: {} });
+    expect(loadProgress()).toEqual({ level: 4, stars: {}, mini: {} });
   });
 
   it('unlocks the next level once and keeps the best stars', () => {
     expect(recordLevelPassed(1, 2)).toEqual({ unlocked: true, newBest: true });
     expect(recordLevelPassed(1, 1)).toEqual({ unlocked: false, newBest: false });
     expect(recordLevelPassed(1, 3)).toEqual({ unlocked: false, newBest: true });
-    expect(loadProgress()).toEqual({ level: 2, stars: { 1: 3 } });
+    expect(loadProgress()).toEqual({ level: 2, stars: { 1: 3 }, mini: {} });
   });
 
   it('never moves the resume level backwards when replaying an old level', () => {
@@ -29,7 +29,7 @@ describe('solo progress', () => {
 
   it('ignores corrupt data and can be cleared', () => {
     localStorage.setItem('geoquest:solo-progress', '{nope');
-    expect(loadProgress()).toEqual({ level: 1, stars: {} });
+    expect(loadProgress()).toEqual({ level: 1, stars: {}, mini: {} });
     recordLevelPassed(1, 1);
     clearProgress();
     expect(loadProgress().level).toBe(1);

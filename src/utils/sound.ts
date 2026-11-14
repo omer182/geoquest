@@ -188,6 +188,20 @@ export const sfx = {
     tone({ freq: 300 + (index % 2) * 60, slideTo: 180, duration: 0.07, type: 'sine', volume: 0.25 });
   },
 
+  /** A country painted in a region game; pitch climbs with the count */
+  paint(count: number) {
+    const scale = [N.C5, N.D5, N.E5, N.G5, N.A5, N.C6, N.D5 * 2, N.E6, N.G6, N.A5 * 2, N.C7];
+    const f = scale[Math.min(count, scale.length - 1)];
+    bell(f, 0, 0.45, 0.38);
+    noise(0, 0.12, 0.05, 2000, 6000); // brush swish
+  },
+
+  /** Wrong country tapped */
+  wrong() {
+    tone({ freq: 220, slideTo: 150, duration: 0.22, type: 'square', volume: 0.12 });
+    tone({ freq: 233, slideTo: 160, duration: 0.22, type: 'square', volume: 0.08 });
+  },
+
   /** Marker arrives at a new stop */
   arrive() {
     [N.G5, N.C6].forEach((f, i) => bell(f, i * 0.08, 0.5, 0.35));

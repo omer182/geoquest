@@ -1,0 +1,100 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import fs from 'node:fs';
+import path from 'node:path';
+import MiniGame from './MiniGame';
+import { getRegion, REGIONS, getPaintStars, PAINT_GOAL } from '../data/regions';
+import { loadProgress } from '../utils/progress';
+import type { CountryFeature } from '../utils/countryShapes';
+
+vi.mock('canvas-confetti', () => ({ default: vi.fn() }));
+
+// Twelve square "countries" in a 4x3 grid inside the Middle East window
+const ISO = 'BH EG IR IQ IL JO KW LB OM QA SA SY'.split(' ');
+const FAKE: CountryFeature[] = ISO.map((iso, i) => {
+  const lng = 28 + (i % 4) * 8;
+  const lat = 16 + Math.floor(i / 4) * 8;
+  return {
+    iso,
+    name: `Land ${iso}`,
+    color: (i % 7) + 1,
+    polygons: [[[[lng, lat], [lng + 6, lat], [lng + 6, lat + 6], [lng, lat + 6], [lng, lat]]]],
+  };
+});
+vi.mock('../utils/countryShapes', () => ({ useCountries: () => FAKE }));
+
+const region = getRegion('middle-east');
+
+const tap = (name: string) => {
+  const el = screen.getByRole('button', { name });
+  fireEvent.pointerDown(el, { pointerId: 1, clientX: 10, clientY: 10 });
+  fireEvent.pointerUp(el, { pointerId: 1, clientX: 10, clientY: 10 });
+};
+const currentTarget = () => screen.getByText(/^Land [A-Z]{2}$/, { selector: '[aria-live]' }).textContent!;
+const wrongFor = (target: string) => FAKE.map(f => f.name).find(n => n !== target)!;
+
+describe('MiniGame', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.useFakeTimers();
+  });
+
+  it('paints the called country and moves on to the next one', () => {
+    render(<MiniGame region={region} onExit={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /start painting/i }));
+    expect(screen.getByText(`Paint 1 of ${PAINT_GOAL}`)).toBeInTheDocument();
+
+    const first = currentTarget();
+    tap(first);
+    expect(screen.getByText(`Paint 2 of ${PAINT_GOAL}`)).toBeInTheDocument();
+    expect(currentTarget()).not.toBe(first);
+  });
+
+  it('costs a life and names the country on a wrong tap, and ends after three', () => {
+    render(<MiniGame region={region} onExit={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /start painting/i }));
+
+    const target = currentTarget();
+    tap(wrongFor(target));
+    expect(screen.getByRole('img', { name: '2 of 3 lives left' })).toBeInTheDocument();
+    expect(screen.getByText(`That's ${wrongFor(target)}`)).toBeInTheDocument();
+
+    act(() => vi.advanceTimersByTime(2000));
+    tap(wrongFor(target));
+    act(() => vi.advanceTimersByTime(2000));
+    tap(wrongFor(target));
+    act(() => vi.advanceTimersByTime(3000));
+
+    expect(screen.getByText(/out of paint!/i)).toBeInTheDocument();
+    expect(loadProgress().mini).toEqual({});
+  });
+
+  it('wins after painting the goal, awarding stars by mistakes and saving them', () => {
+    render(<MiniGame region={region} onExit={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /start painting/i }));
+
+    tap(wrongFor(currentTarget())); // one mistake -> 2 stars
+    act(() => vi.advanceTimersByTime(2000));
+    for (let i = 0; i < PAINT_GOAL; i++) tap(currentTarget());
+    act(() => vi.advanceTimersByTime(5000));
+
+    expect(screen.getByText(/region painted!/i)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '2 of 3 stars' })).toBeInTheDocument();
+    expect(loadProgress().mini).toEqual({ 'middle-east': 2 });
+  });
+});
+
+describe('regions', () => {
+  it('only lists country codes that exist in the bundled map data', () => {
+    const geo = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../assets/geo/countries-low.geojson'), 'utf8'));
+    const codes = new Set(geo.features.map((f: { properties: { ISO_A2_EH: string } }) => f.properties.ISO_A2_EH));
+    for (const r of REGIONS) for (const c of r.codes) expect(codes.has(c), `${r.id}: ${c}`).toBe(true);
+  });
+
+  it('gives 3/2/1 stars for 0/1/2 mistakes and none for a loss', () => {
+    expect(getPaintStars(true, 0)).toBe(3);
+    expect(getPaintStars(true, 1)).toBe(2);
+    expect(getPaintStars(true, 2)).toBe(1);
+    expect(getPaintStars(false, 0)).toBe(0);
+  });
+});

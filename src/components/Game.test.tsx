@@ -160,7 +160,7 @@ describe('Game Integration', () => {
     // Five perfect pins (+ streak bonuses) earn all three stars and unlock level 2
     expect(screen.getAllByRole('img', { name: '3 of 3 stars' }).length).toBeGreaterThan(0);
     expect(screen.getByText(/level 2 unlocked!/i)).toBeInTheDocument();
-    expect(JSON.parse(localStorage.getItem('geoquest:solo-progress') || '{}')).toEqual({ level: 2, stars: { 1: 3 } });
+    expect(JSON.parse(localStorage.getItem('geoquest:solo-progress') || '{}')).toEqual({ level: 2, stars: { 1: 3 }, mini: {} });
 
     fireEvent.click(screen.getByRole('button', { name: /^continue$/i }));
     expect(screen.getByRole('button', { name: /play level 2/i })).toBeInTheDocument();
