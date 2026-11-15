@@ -241,9 +241,12 @@ export interface DayRecord {
   flagStars?: number;
 }
 
-/** Flag round stars: no mistakes 3, one or two 2, more 1 */
-export function getFlagStars(mistakes: number): number {
-  return mistakes === 0 ? 3 : mistakes <= 2 ? 2 : 1;
+/** Checks allowed in the flag round */
+export const FLAG_CHECKS = 3;
+
+/** Flag round stars: all right on the first check 3, the second 2, the third 1; 0 if never. */
+export function getFlagStars(solvedOnCheck: number | null): number {
+  return solvedOnCheck === null ? 0 : Math.max(0, FLAG_CHECKS + 1 - solvedOnCheck);
 }
 
 /** Record the flag round on a finished day (keeps the best result). */

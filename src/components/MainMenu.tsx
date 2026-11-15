@@ -51,19 +51,20 @@ export default function MainMenu({ onSinglePlayer, onMultiplayer, onPaintTheMap,
 
           {/* Road Trip (daily puzzle) */}
           <button onClick={onRoadTrip} className="btn btn-sea btn-block justify-between">
-            <span className="flex items-center gap-2.5">
+            <span className="flex items-center gap-2.5 whitespace-nowrap">
               <span aria-hidden="true" className="text-lg">🚗</span>
               Road Trip
             </span>
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5">
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                className={`whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
                   tripDone ? 'bg-white/20 text-white' : 'bg-brass-light text-ink'
                 }`}
               >
-                {tripDone ? (today?.status === 'won' ? 'Done' : 'Tomorrow') : 'Today'}
+                {tripDone ? 'Done today' : 'Daily challenge'}
               </span>
-              <span aria-hidden="true" className="text-white/70">→</span>
+              {/* No room for the arrow beside the pill on the narrowest phones */}
+              <span aria-hidden="true" className="hidden text-white/70 min-[360px]:inline">→</span>
             </span>
           </button>
 
