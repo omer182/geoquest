@@ -79,15 +79,15 @@ describe('daily puzzle', () => {
     expect(dailyPuzzle('2026-11-16')).not.toEqual(dailyPuzzle('2026-11-15'));
   });
 
-  it('always has a land route with 2 to 5 countries in between', () => {
+  it('always has a land route with 8 to 12 countries in between', () => {
     expect(puzzlePairs().length).toBeGreaterThan(1000);
     for (let i = 0; i < 400; i++) {
       const d = new Date(Date.UTC(2026, 10, 15 + i));
       const p = dailyPuzzle(d.toISOString().slice(0, 10));
       const r = analyseRoute(p.start, p.end)!;
       expect(r).not.toBeNull();
-      expect(minGuesses(r)).toBeGreaterThanOrEqual(2);
-      expect(minGuesses(r)).toBeLessThanOrEqual(5);
+      expect(minGuesses(r)).toBeGreaterThanOrEqual(8);
+      expect(minGuesses(r)).toBeLessThanOrEqual(12);
     }
   });
 

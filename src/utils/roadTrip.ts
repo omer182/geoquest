@@ -8,9 +8,9 @@ import { BORDERS, COUNTRY_NAMES } from '../data/borders';
 export const ROAD_TRIP_STRIKES = 3;
 /** A country is "close" (yellow) when a route through it is at most this many countries longer */
 export const NEAR_SLACK = 2;
-/** Countries between start and end on the shortest route */
-const MIN_BETWEEN = 2;
-const MAX_BETWEEN = 5;
+/** Countries between start and end on the shortest route: long trips across a continent */
+export const MIN_BETWEEN = 8;
+export const MAX_BETWEEN = 12;
 /** Never a start or end: too small to see, or disputed */
 const NOT_ENDPOINTS = new Set(['VA', 'SM', 'MC', 'LI', 'AD', 'LU', 'XK', 'EH']);
 
@@ -247,6 +247,17 @@ function load(): Saved {
     return { days: raw && typeof raw.days === 'object' && raw.days ? raw.days : {} };
   } catch {
     return { days: {} };
+  }
+}
+
+// Dev only: open the app with ?reset-trip to play today's trip again
+if (import.meta.env.DEV && typeof location !== 'undefined' && new URLSearchParams(location.search).has('reset-trip')) {
+  const s = load();
+  delete s.days[localDate()];
+  try {
+    localStorage.setItem(KEY, JSON.stringify(s));
+  } catch {
+    /* storage unavailable */
   }
 }
 
