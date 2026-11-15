@@ -29,7 +29,7 @@ export const REGIONS: readonly Region[] = [
     name: 'Middle East',
     title: 'Paint the Middle East',
     source: 'countries',
-    codes: 'BH EG IR IQ IL JO KW LB OM QA SA SY TR AE YE PS CY'.split(' '),
+    codes: 'BH EG IR IQ IL JO KW LB OM QA SA SY TR AE YE CY'.split(' '),
     bounds: { west: 24, east: 64, south: 11, north: 43 },
   },
   {
