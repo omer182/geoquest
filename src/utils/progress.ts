@@ -92,10 +92,16 @@ export function recordMiniGame(regionId: string, stars: number): boolean {
   return true;
 }
 
+/** Restarts the journey from level 1. Paint the Map stars are kept: they are a separate mode. */
 export function clearProgress(): void {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    /* storage unavailable */
+  const { mini } = loadProgress();
+  if (Object.keys(mini).length === 0) {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* storage unavailable */
+    }
+    return;
   }
+  save({ ...empty(), mini });
 }

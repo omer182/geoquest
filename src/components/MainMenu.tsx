@@ -3,14 +3,15 @@ import AtlasScreen, { CompassRose } from './ui/AtlasScreen';
 interface MainMenuProps {
   onSinglePlayer: () => void;
   onMultiplayer: () => void;
+  onPaintTheMap: () => void;
   onAbout: () => void;
 }
 
 /**
  * MainMenu component - Entry point for choosing game mode
- * Displays three options: Single Player, Multiplayer, and About
+ * Options: Solo Run, Paint the Map (mini games), Online Battle, and About
  */
-export default function MainMenu({ onSinglePlayer, onMultiplayer, onAbout }: MainMenuProps) {
+export default function MainMenu({ onSinglePlayer, onMultiplayer, onPaintTheMap, onAbout }: MainMenuProps) {
   return (
     <AtlasScreen>
       {/* Wordmark */}
@@ -33,6 +34,15 @@ export default function MainMenu({ onSinglePlayer, onMultiplayer, onAbout }: Mai
               Solo Run
             </span>
             <span aria-hidden="true" className="text-paper/60">→</span>
+          </button>
+
+          {/* Paint the Map (mini games) */}
+          <button onClick={onPaintTheMap} className="btn btn-success btn-block justify-between">
+            <span className="flex items-center gap-2.5">
+              <span aria-hidden="true" className="text-lg">🎨</span>
+              Paint the Map
+            </span>
+            <span aria-hidden="true" className="text-white/70">→</span>
           </button>
 
           {/* Online Battle Button */}

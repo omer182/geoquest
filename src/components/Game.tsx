@@ -7,8 +7,6 @@ import { calculateScore, getLevelThreshold, getLevelStars, STREAK_SCORE, STREAK_
 import { loadProgress, recordLevelPassed, clearProgress, type SoloProgress } from '../utils/progress';
 import { sfx } from '../utils/sound';
 import JourneyMap from './JourneyMap';
-import MiniGame from './MiniGame';
-import { getRegion, type RegionId } from '../data/regions';
 import MuteButton from './MuteButton';
 import { useSocket } from '../hooks/useSocket';
 import { useSocketEvent } from '../hooks/useSocketEvent';
@@ -577,7 +575,6 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   // Journey map: saved progress (re-read whenever the map shows) and the level the pin walks from.
   const [progress, setProgress] = useState<SoloProgress>(() => loadProgress());
   const [walkFrom, setWalkFrom] = useState<number | null>(null);
-  const [activeRegion, setActiveRegion] = useState<RegionId | null>(null);
   useEffect(() => {
     if (state.gameStatus === GameStatus.READY) setProgress(loadProgress());
   }, [state.gameStatus]);
@@ -607,21 +604,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
       <div className="h-screen bg-paper-deep flex flex-col relative overflow-hidden">
       <div className="relative z-10 flex flex-col h-full overflow-hidden">
       {/* READY State: journey map */}
-      {state.gameStatus === GameStatus.READY && state.gameMode === 'single-player' && activeRegion && (
-        <div className="flex-1 min-h-0">
-          <MiniGame
-            key={activeRegion}
-            region={getRegion(activeRegion)}
-            bestStars={progress.mini[activeRegion] ?? 0}
-            onExit={() => {
-              setActiveRegion(null);
-              setWalkFrom(null);
-              setProgress(loadProgress());
-            }}
-          />
-        </div>
-      )}
-      {state.gameStatus === GameStatus.READY && state.gameMode === 'single-player' && !activeRegion && (
+      {state.gameStatus === GameStatus.READY && state.gameMode === 'single-player' && (
         <div className="flex-1 min-h-0">
           <JourneyMap
             key={`${progress.level}-${walkFrom ?? ''}`}
@@ -630,10 +613,6 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
             onPlay={level => {
               setWalkFrom(null);
               handleStartGame(level);
-            }}
-            onPlayBonus={region => {
-              setWalkFrom(null);
-              setActiveRegion(region);
             }}
             onStartOver={handleStartOver}
             onMainMenu={onBackToMainMenu}

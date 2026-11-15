@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { loadProgress, recordLevelPassed, saveReachedLevel, clearProgress } from './progress';
+import { loadProgress, recordLevelPassed, recordMiniGame, saveReachedLevel, clearProgress } from './progress';
 import { getLevelStars } from './scoring';
 
 describe('solo progress', () => {
@@ -33,6 +33,23 @@ describe('solo progress', () => {
     recordLevelPassed(1, 1);
     clearProgress();
     expect(loadProgress().level).toBe(1);
+  });
+});
+
+describe('paint the map progress', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('keeps the best stars per region', () => {
+    expect(recordMiniGame('europe', 2)).toBe(true);
+    expect(recordMiniGame('europe', 1)).toBe(false);
+    expect(loadProgress().mini).toEqual({ europe: 2 });
+  });
+
+  it('survives restarting the journey', () => {
+    recordLevelPassed(1, 3);
+    recordMiniGame('usa', 3);
+    clearProgress();
+    expect(loadProgress()).toEqual({ level: 1, stars: {}, mini: { usa: 3 } });
   });
 });
 

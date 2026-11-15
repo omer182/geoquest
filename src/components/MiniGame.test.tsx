@@ -95,10 +95,8 @@ describe('regions', () => {
     }
   });
 
-  it('has enough paintable places in every region and one bonus stop per gap', () => {
+  it('has enough paintable places in every region', () => {
     for (const r of REGIONS) expect(r.codes.length, r.id).toBeGreaterThanOrEqual(PAINT_GOAL);
-    const gaps = REGIONS.map(r => r.afterLevel);
-    expect(new Set(gaps).size).toBe(gaps.length);
   });
 
   it('gives 3/2/1 stars for 0/1/2 mistakes and none for a loss', () => {

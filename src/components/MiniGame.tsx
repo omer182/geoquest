@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { Star } from './ui/Star';
 import MuteButton from './MuteButton';
-import { useShapes, type CountryFeature, type Ring } from '../utils/countryShapes';
+import { useShapes } from '../utils/countryShapes';
+import { projectRegion, VIEW_W, PAINT, LAND, type Shape } from '../utils/regionProjection';
 import { getPaintStars, MAX_MISTAKES, PAINT_GOAL, type Region } from '../data/regions';
 import { recordMiniGame } from '../utils/progress';
 import { sfx } from '../utils/sound';
@@ -11,63 +12,12 @@ interface MiniGameProps {
   region: Region;
   /** Best stars already earned on this region */
   bestStars?: number;
-  /** Back to the journey map */
+  /** Back to the Paint the Map menu */
   onExit: () => void;
 }
 
-const VIEW_W = 1000;
-const PAINT = ['#F2B790', '#A6CF8E', '#9CC3E0', '#E9C46A', '#C9AEDF', '#F4A6A0', '#8FD3C1'];
-const LAND = '#F4E7C5';
 /** Countries whose largest piece is smaller than this (map units) are drawn but never asked */
 const MIN_TARGET_SIZE = 13;
-
-interface Shape {
-  iso: string;
-  name: string;
-  d: string;
-  paint: string;
-  /** Centre of the largest piece, for the name label */
-  cx: number;
-  cy: number;
-  /** Diagonal of the largest piece */
-  size: number;
-}
-
-function projectRegion(region: Region, countries: CountryFeature[]): { shapes: Shape[]; viewH: number } {
-  const { west, east, south, north } = region.bounds;
-  const kx = Math.cos((((north + south) / 2) * Math.PI) / 180);
-  const unit = VIEW_W / ((east - west) * kx);
-  const px = (lng: number, lat: number): [number, number] => [(lng - west) * kx * unit, (north - lat) * unit];
-
-  const wanted = new Set(region.codes);
-  const shapes: Shape[] = [];
-  for (const c of countries) {
-    if (!wanted.has(c.iso)) continue;
-    let d = '';
-    let best = { size: -1, cx: 0, cy: 0 };
-    for (const poly of c.polygons as Ring[][]) {
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      poly.forEach((ring, ri) => {
-        let prev: number | null = null;
-        ring.forEach(([lng, lat], i) => {
-          const [x, y] = px(lng, lat);
-          const jump = prev !== null && Math.abs(lng - prev) > 180;
-          d += `${i === 0 || jump ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
-          prev = lng;
-          if (ri === 0) {
-            minX = Math.min(minX, x); maxX = Math.max(maxX, x);
-            minY = Math.min(minY, y); maxY = Math.max(maxY, y);
-          }
-        });
-        d += 'Z';
-      });
-      const size = Math.hypot(maxX - minX, maxY - minY);
-      if (size > best.size) best = { size, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2 };
-    }
-    shapes.push({ iso: c.iso, name: c.name, d, paint: PAINT[(c.color - 1 + PAINT.length) % PAINT.length], ...best });
-  }
-  return { shapes, viewH: (north - south) * unit };
-}
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -347,7 +297,7 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
     <div className="relative flex h-full flex-col bg-paper-deep">
       {/* Top bar */}
       <div className="relative z-20 flex items-center gap-2 px-3 pt-3 sm:px-4">
-        <button onClick={onExit} className="hud-card btn min-h-[40px] min-w-[40px] px-2.5 py-2" aria-label="Back to the journey map">
+        <button onClick={onExit} className="hud-card btn min-h-[40px] min-w-[40px] px-2.5 py-2" aria-label="Back to all maps">
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
             <path d="M15 5l-7 7 7 7" />
           </svg>
@@ -470,7 +420,7 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
           <div className="atlas-card w-full max-w-sm animate-pop p-6 text-center">
             {phase === 'intro' && (
               <>
-                <div className="atlas-eyebrow mb-1">Bonus stop</div>
+                <div className="atlas-eyebrow mb-1">Paint the Map</div>
                 <h2 className="font-display text-3xl font-bold text-ink">{region.title}</h2>
                 <p className="mt-2 text-sm leading-relaxed text-ink-soft">
                   We call a {region.source === 'us-states' ? 'state' : 'country'}, you tap it to paint it in. Paint {PAINT_GOAL} to colour the whole region. {hearts} wrong taps
@@ -484,7 +434,7 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
                   <button onClick={start} disabled={!projected} className="btn btn-accent btn-block text-base">
                     {projected ? 'Start painting' : 'Loading map…'}
                   </button>
-                  <button onClick={onExit} className="btn btn-ghost btn-block text-sm">Journey Map</button>
+                  <button onClick={onExit} className="btn btn-ghost btn-block text-sm">All maps</button>
                 </div>
               </>
             )}
@@ -504,7 +454,7 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
                   {result.newBest && bestStars > 0 ? 'New best!' : ''}
                 </p>
                 <div className="mt-4 space-y-2">
-                  <button onClick={onExit} className="btn btn-success btn-block text-base">Journey Map</button>
+                  <button onClick={onExit} className="btn btn-success btn-block text-base">All maps</button>
                   {result.stars < 3 && (
                     <button onClick={start} className="btn btn-secondary btn-block text-sm">Paint again for 3 stars</button>
                   )}
@@ -520,7 +470,7 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
                 </p>
                 <div className="mt-4 space-y-2">
                   <button onClick={start} className="btn btn-accent btn-block text-base">Try Again</button>
-                  <button onClick={onExit} className="btn btn-ghost btn-block text-sm">Journey Map</button>
+                  <button onClick={onExit} className="btn btn-ghost btn-block text-sm">All maps</button>
                 </div>
               </>
             )}

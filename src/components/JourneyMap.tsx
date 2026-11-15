@@ -4,7 +4,6 @@ import { Star } from './ui/Star';
 import MuteButton from './MuteButton';
 import { MAX_LEVEL } from '../utils/scoring';
 import type { SoloProgress } from '../utils/progress';
-import { REGIONS, type RegionId } from '../data/regions';
 import { sfx } from '../utils/sound';
 
 interface JourneyMapProps {
@@ -13,8 +12,6 @@ interface JourneyMapProps {
   walkFrom?: number | null;
   /** Start a level (current or any beaten one) */
   onPlay: (level: number) => void;
-  /** Open a "paint the region" bonus game */
-  onPlayBonus?: (region: RegionId) => void;
   /** Wipe progress and start again from level 1 */
   onStartOver: () => void;
   onMainMenu?: () => void;
@@ -22,7 +19,7 @@ interface JourneyMapProps {
 
 // ---------------------------------------------------------------------------
 // Layout: a made-up world climbing from meadows to a castle in the sky.
-// Level stops wind up the middle; bonus stops branch off to the side.
+// Level stops wind up the middle of the map.
 // ---------------------------------------------------------------------------
 const W = 360;
 const N_LEVELS = MAX_LEVEL + 1; // 10 levels + the endless castle stop
@@ -62,13 +59,6 @@ const SEGMENTS = Array.from({ length: N_LEVELS - 1 }, (_, i) => {
   return `M${NODES[i].x},${NODES[i].y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${NODES[i + 1].x},${NODES[i + 1].y}`;
 });
 
-/** Bonus stops: off to the side of the road just after their unlocking level. */
-const BONUS = REGIONS.map(region => {
-  const mid = bezierAt(region.afterLevel - 1, 0.5);
-  const x = Math.min(Math.max(mid.x >= W / 2 ? mid.x - 112 : mid.x + 112, 46), W - 46);
-  return { region, mid, pos: { x, y: mid.y - 6 } };
-});
-
 // Zones (by level index), bottom to top
 const ZONES = [
   { name: 'Meadowlands', from: 0, to: 2, ground: '#CDE7B0', kind: 'meadow' },
@@ -96,10 +86,6 @@ const SCENERY = (() => {
   const keepOut: Pt[] = [];
   for (let i = 0; i < N_LEVELS - 1; i++) for (let t = 0; t <= 1; t += 1 / 14) keepOut.push(bezierAt(i, t));
   NODES.forEach(n => keepOut.push({ x: n.x, y: n.y + 30 }));
-  BONUS.forEach(b => {
-    for (let t = 0; t <= 1; t += 0.2) keepOut.push({ x: b.mid.x + (b.pos.x - b.mid.x) * t, y: b.mid.y + (b.pos.y - b.mid.y) * t });
-    keepOut.push({ x: b.pos.x, y: b.pos.y + 32 }, { x: b.pos.x - 30, y: b.pos.y + 32 }, { x: b.pos.x + 30, y: b.pos.y + 32 });
-  });
   const castle = { x: NODES[N_LEVELS - 1].x, y: NODES[N_LEVELS - 1].y - 70 };
   keepOut.push(castle, { x: castle.x - 40, y: castle.y }, { x: castle.x + 40, y: castle.y }, { x: castle.x, y: castle.y - 40 });
   const clear = (p: Pt, r: number) => keepOut.every(k => Math.hypot(k.x - p.x, k.y - p.y) > r);
@@ -311,7 +297,7 @@ function canAnimate(): boolean {
  * the player's pin walks the road to each newly unlocked stop, and
  * "paint the region" bonus stops branch off the road as they unlock.
  */
-export default function JourneyMap({ progress, walkFrom, onPlay, onPlayBonus, onStartOver, onMainMenu }: JourneyMapProps) {
+export default function JourneyMap({ progress, walkFrom, onPlay, onStartOver, onMainMenu }: JourneyMapProps) {
   const current = progress.level;
   const currentStop = stopIndex(current);
   const fromStop = walkFrom != null ? stopIndex(walkFrom) : null;
@@ -384,13 +370,8 @@ export default function JourneyMap({ progress, walkFrom, onPlay, onPlayBonus, on
     return () => clearTimeout(t);
   }, [confirmingReset]);
 
-  const totalStars = useMemo(
-    () =>
-      Object.values(progress.stars).reduce((a, b) => a + b, 0) +
-      Object.values(progress.mini ?? {}).reduce((a, b) => a + b, 0),
-    [progress.stars, progress.mini]
-  );
-  const maxStars = MAX_LEVEL * 3 + REGIONS.length * 3;
+  const totalStars = useMemo(() => Object.values(progress.stars).reduce((a, b) => a + b, 0), [progress.stars]);
+  const maxStars = MAX_LEVEL * 3;
   const isFresh = current === 1 && totalStars === 0;
 
   const play = (level: number) => {
@@ -455,8 +436,6 @@ export default function JourneyMap({ progress, walkFrom, onPlay, onPlayBonus, on
               const stops = [
                 ...NODES,
                 ...NODES.map(n => ({ x: n.x, y: n.y + 22 })),
-                ...BONUS.map(b => b.pos),
-                ...BONUS.map(b => ({ x: b.pos.x, y: b.pos.y + 32 })),
               ];
               const yBase = zoneBottom(z) - (z.from === 0 ? 34 : 22);
               const spots = [62, W - 62].flatMap(sx => [0, 26, -26].map(dy => ({ x: sx, y: yBase + dy })));
@@ -504,59 +483,6 @@ export default function JourneyMap({ progress, walkFrom, onPlay, onPlayBonus, on
                 />
               </g>
             ))}
-
-            {/* Bonus spurs and stops */}
-            {BONUS.map(({ region, mid, pos }) => {
-              const unlocked = current > region.afterLevel;
-              const stars = progress.mini?.[region.id] ?? 0;
-              const canOpen = unlocked && !walking && !!onPlayBonus;
-              return (
-                <g key={region.id}>
-                  <path
-                    d={`M${mid.x},${mid.y} Q${(mid.x + pos.x) / 2},${mid.y - 22} ${pos.x},${pos.y}`}
-                    fill="none"
-                    stroke={unlocked ? '#C9962B' : '#C9B994'}
-                    strokeWidth="3.5"
-                    strokeDasharray="2 7"
-                    strokeLinecap="round"
-                  />
-                  <g
-                    transform={`translate(${pos.x},${pos.y})`}
-                    onClick={
-                      canOpen
-                        ? () => {
-                            sfx.click();
-                            onPlayBonus!(region.id);
-                          }
-                        : undefined
-                    }
-                    style={{ cursor: canOpen ? 'pointer' : 'default' }}
-                    role={unlocked ? 'button' : undefined}
-                    aria-label={`Bonus: paint ${region.name}${unlocked ? (stars ? `, ${stars} stars` : '') : `, unlocks after level ${region.afterLevel}`}`}
-                  >
-                    {unlocked && !stars && (
-                      <circle r="24" fill="#C9962B" className="animate-node-pulse" style={{ transformOrigin: 'center', transformBox: 'fill-box' }} />
-                    )}
-                    <circle r="19" cy="3" fill="#1E2A4426" />
-                    <circle r="18" fill={unlocked ? '#FBF6EA' : '#EDE3CC'} stroke={unlocked ? '#C9962B' : '#C9B994'} strokeWidth="3" />
-                    <g opacity={unlocked ? 1 : 0.45}>
-                      <path
-                        d="M-9,-1 a10,9 0 1 1 18,2 c0,4 -6,2 -6,6 c0,3 -3,4 -6,3 a10,9 0 0 1 -6,-11z"
-                        fill="#E9D3A6"
-                        stroke="#8A6A44"
-                        strokeWidth="1.2"
-                      />
-                      <circle cx="-4" cy="-4" r="2.3" fill="#C8553D" />
-                      <circle cx="2" cy="-6" r="2.3" fill="#2F6F9A" />
-                      <circle cx="6.5" cy="-1.5" r="2.3" fill="#4E8B5A" />
-                      <circle cx="-5" cy="2.5" r="2.3" fill="#E9C46A" />
-                    </g>
-                    {stars > 0 ? <MiniStars count={stars} y={19} /> : null}
-                    <Label text={region.name} y={stars > 0 ? 45 : 32} dim={!unlocked} />
-                  </g>
-                </g>
-              );
-            })}
 
             {/* Level stops */}
             {NODES.map((p, i) => {
@@ -626,7 +552,7 @@ export default function JourneyMap({ progress, walkFrom, onPlay, onPlayBonus, on
       {isFresh && (
         <p className="mt-3 text-center text-xs leading-relaxed text-ink-soft">
           Pin each city as close as you can. Hit the target over 5 rounds to unlock the next stop, earn up to 3 stars per
-          level, and paint regions at the bonus stops.
+          level.
         </p>
       )}
 

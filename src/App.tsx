@@ -6,6 +6,10 @@ import MultiplayerSubmenu from './components/MultiplayerSubmenu';
 import CreateRoom from './components/CreateRoom';
 import JoinRoom from './components/JoinRoom';
 import RoomLobby from './components/RoomLobby';
+import PaintTheMapMenu from './components/PaintTheMapMenu';
+import MiniGame from './components/MiniGame';
+import { getRegion, type RegionId } from './data/regions';
+import { loadProgress } from './utils/progress';
 import { WebSocketProvider } from './context/WebSocketContext';
 import { GameProvider, useGame } from './context/GameContext';
 import { ConnectionStatus } from './components/ConnectionStatus';
@@ -18,6 +22,8 @@ type AppScreen =
   | 'join-room'
   | 'room-lobby'
   | 'game'
+  | 'paint-menu'
+  | 'paint-game'
   | 'about';
 
 /**
@@ -28,6 +34,7 @@ function AppContent() {
   const { state, dispatch } = useGame();
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('main-menu');
   const [urlRoomCode, setUrlRoomCode] = useState<string | null>(null);
+  const [paintRegion, setPaintRegion] = useState<RegionId | null>(null);
 
   // Check for room code in URL on mount
   useEffect(() => {
@@ -47,6 +54,10 @@ function AppContent() {
 
   const handleMultiplayer = () => {
     setCurrentScreen('multiplayer-submenu');
+  };
+
+  const handlePaintTheMap = () => {
+    setCurrentScreen('paint-menu');
   };
 
   const handleAbout = () => {
@@ -89,9 +100,33 @@ function AppContent() {
         <MainMenu
           onSinglePlayer={handleSinglePlayer}
           onMultiplayer={handleMultiplayer}
+          onPaintTheMap={handlePaintTheMap}
           onAbout={handleAbout}
         />
       );
+
+    case 'paint-menu':
+      return (
+        <PaintTheMapMenu
+          onPlay={region => {
+            setPaintRegion(region);
+            setCurrentScreen('paint-game');
+          }}
+          onBack={() => setCurrentScreen('main-menu')}
+        />
+      );
+
+    case 'paint-game':
+      return paintRegion ? (
+        <div className="h-screen">
+          <MiniGame
+            key={paintRegion}
+            region={getRegion(paintRegion)}
+            bestStars={loadProgress().mini[paintRegion] ?? 0}
+            onExit={() => setCurrentScreen('paint-menu')}
+          />
+        </div>
+      ) : null;
 
     case 'multiplayer-submenu':
       return (
@@ -141,7 +176,7 @@ function AppContent() {
       );
 
     default:
-      return <MainMenu onSinglePlayer={handleSinglePlayer} onMultiplayer={handleMultiplayer} onAbout={handleAbout} />;
+      return <MainMenu onSinglePlayer={handleSinglePlayer} onMultiplayer={handleMultiplayer} onPaintTheMap={handlePaintTheMap} onAbout={handleAbout} />;
   }
 }
 
