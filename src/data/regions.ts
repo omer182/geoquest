@@ -79,17 +79,11 @@ export const REGIONS: readonly Region[] = [
 
 export const getRegion = (id: RegionId): Region => REGIONS.find(r => r.id === id)!;
 
-/** Every place in the region must be painted. Lives (wrong taps allowed) scale with its size. */
-export function livesFor(placeCount: number): number {
-  return placeCount >= 30 ? 5 : 3;
-}
+/** Every place in the region must be painted; the third wrong tap ends the game. */
+export const PAINT_LIVES = 3;
 
-/**
- * Stars for a region game: 3 with no mistakes, 1 when down to the last life,
- * 2 in between (3 lives: 0/1/2 mistakes = 3/2/1 stars; 5 lives: 0 / 1-2 / 3-4).
- */
-export function getPaintStars(won: boolean, mistakes: number, lives = 3): number {
+/** Stars for a region game: no mistakes 3, one mistake 2, two mistakes 1. */
+export function getPaintStars(won: boolean, mistakes: number): number {
   if (!won) return 0;
-  if (mistakes === 0) return 3;
-  return mistakes <= Math.floor((lives - 1) / 2) ? 2 : 1;
+  return Math.max(1, 3 - mistakes);
 }

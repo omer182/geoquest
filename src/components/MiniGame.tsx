@@ -4,7 +4,7 @@ import { Star } from './ui/Star';
 import MuteButton from './MuteButton';
 import { useShapes } from '../utils/countryShapes';
 import { projectRegion, VIEW_W, PAINT, LAND, type Shape } from '../utils/regionProjection';
-import { getPaintStars, livesFor, type Region } from '../data/regions';
+import { getPaintStars, PAINT_LIVES, type Region } from '../data/regions';
 import { recordMiniGame } from '../utils/progress';
 import { sfx } from '../utils/sound';
 
@@ -69,7 +69,7 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
 
   const target = targets[step];
   const goal = targets.length || projected?.shapes.length || 0;
-  const hearts = livesFor(projected?.shapes.length ?? 0);
+  const hearts = PAINT_LIVES;
   const placeWord = region.source === 'us-states' ? 'state' : 'country';
 
   const start = () => {
@@ -89,7 +89,7 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
   };
 
   const finishWon = (finalMistakes: number) => {
-    const stars = getPaintStars(true, finalMistakes, hearts);
+    const stars = getPaintStars(true, finalMistakes);
     const newBest = recordMiniGame(region.id, stars);
     later(() => {
       setResult({ stars, newBest });
@@ -419,13 +419,13 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
                 <h2 className="font-display text-3xl font-bold text-ink">{region.title}</h2>
                 <p className="mt-2 text-sm leading-relaxed text-ink-soft">
                   We call a {placeWord}, you tap it to paint it in. Paint all {projected?.shapes.length ?? ''} {placeWord === 'state' ? 'states' : 'countries'}{' '}
-                  yourself to colour the whole map. {hearts} wrong taps and you&apos;re out.
+                  yourself to colour the whole map. Three strikes and you&apos;re out.
                 </p>
                 <div className="mt-3 flex justify-center gap-1 text-paper-line">
                   {[0, 1, 2].map(i => <Star key={i} filled={i < bestStars} className="h-7 w-7" />)}
                 </div>
                 <p className="mt-1 text-[11px] text-ink-faint">
-                  {hearts === 3 ? 'No mistakes 3★ · one 2★ · two 1★' : 'No mistakes 3★ · one or two 2★ · more 1★'}
+                  No mistakes 3★ · one 2★ · two 1★
                 </p>
                 <div className="mt-4 space-y-2">
                   <button onClick={start} disabled={!projected} className="btn btn-accent btn-block text-base">

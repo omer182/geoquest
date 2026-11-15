@@ -3,7 +3,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import fs from 'node:fs';
 import path from 'node:path';
 import MiniGame from './MiniGame';
-import { getRegion, REGIONS, getPaintStars, livesFor } from '../data/regions';
+import { getRegion, REGIONS, getPaintStars, PAINT_LIVES } from '../data/regions';
 import { loadProgress } from '../utils/progress';
 import type { CountryFeature } from '../utils/countryShapes';
 
@@ -114,17 +114,13 @@ describe('regions', () => {
     }
   });
 
-  it('has a real map to paint in every region, with more lives for the big ones', () => {
+  it('has a real map to paint in every region, with three strikes on each', () => {
     for (const r of REGIONS) expect(r.codes.length, r.id).toBeGreaterThanOrEqual(10);
-    expect(livesFor(17)).toBe(3);
-    expect(livesFor(48)).toBe(5);
+    expect(PAINT_LIVES).toBe(3); // three strikes on every map, big or small
   });
 
-  it('gives stars by mistakes relative to the lives, and none for a loss', () => {
-    // 3 lives: 0 / 1 / 2 mistakes
-    expect([0, 1, 2].map(m => getPaintStars(true, m, 3))).toEqual([3, 2, 1]);
-    // 5 lives: 0 / 1-2 / 3-4 mistakes
-    expect([0, 1, 2, 3, 4].map(m => getPaintStars(true, m, 5))).toEqual([3, 2, 2, 1, 1]);
-    expect(getPaintStars(false, 0, 3)).toBe(0);
+  it('gives 3/2/1 stars for 0/1/2 mistakes and none for a loss', () => {
+    expect([0, 1, 2].map(m => getPaintStars(true, m))).toEqual([3, 2, 1]);
+    expect(getPaintStars(false, 0)).toBe(0);
   });
 });

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import AtlasScreen, { AtlasHeading } from './ui/AtlasScreen';
 import { Star, StarRow } from './ui/Star';
 import MuteButton from './MuteButton';
-import { REGIONS, livesFor, type Region, type RegionId } from '../data/regions';
+import { REGIONS, type Region, type RegionId } from '../data/regions';
 import { useShapes, type CountryFeature } from '../utils/countryShapes';
 import { projectRegion, VIEW_W, LAND } from '../utils/regionProjection';
 import { loadProgress } from '../utils/progress';
@@ -44,7 +44,7 @@ export default function PaintTheMapMenu({ onPlay, onBack }: PaintTheMapMenuProps
       <AtlasHeading
         eyebrow="Mini games"
         title="Paint the Map"
-        subtitle="We call a place, you tap it. Paint every one yourself to colour the whole map. Wrong taps cost a life."
+        subtitle="We call a place, you tap it. Paint every one yourself to colour the whole map. Three strikes and you're out."
       />
 
       <div className="mb-3 flex justify-center">
@@ -75,7 +75,7 @@ export default function PaintTheMapMenu({ onPlay, onBack }: PaintTheMapMenuProps
                 <StarRow count={stars} className="h-3.5 w-3.5" gap="gap-0" />
               </div>
               <div className="text-[11px] text-ink-faint">
-                {region.codes.length} {region.source === 'us-states' ? 'states' : 'countries'} · {livesFor(region.codes.length)} lives
+                {region.codes.length} {region.source === 'us-states' ? 'states' : 'countries'}
               </div>
             </button>
           );
