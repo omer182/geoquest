@@ -269,18 +269,6 @@ function MiniStars({ count, y }: { count: number; y: number }) {
   );
 }
 
-function Label({ text, y, dim }: { text: string; y: number; dim?: boolean }) {
-  const w = text.length * 6.6 + 14;
-  return (
-    <g transform={`translate(0,${y})`}>
-      <rect x={-w / 2} y="-8.5" width={w} height="17" rx="8.5" fill="#FBF6EA" stroke="#D9C9A5" strokeWidth="1" />
-      <text y="4" textAnchor="middle" fontSize="11" fontWeight="600" fill={dim ? '#A8977A' : '#1E2A44'} fontFamily="Inter, sans-serif">
-        {text}
-      </text>
-    </g>
-  );
-}
-
 const stopIndex = (level: number) => Math.min(level, N_LEVELS) - 1;
 
 function canAnimate(): boolean {
