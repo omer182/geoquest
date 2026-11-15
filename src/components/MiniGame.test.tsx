@@ -31,7 +31,7 @@ const tap = (name: string) => {
   fireEvent.pointerDown(el, { pointerId: 1, clientX: 10, clientY: 10 });
   fireEvent.pointerUp(el, { pointerId: 1, clientX: 10, clientY: 10 });
 };
-const currentTarget = () => screen.getByText(/^Land [A-Z]{2}$/, { selector: '[aria-live]' }).textContent!;
+const currentTarget = () => screen.getByText(/^Land [A-Z]{2}$/, { selector: '[aria-live] span' }).textContent!;
 const wrongFor = (target: string) => FAKE.map(f => f.name).find(n => n !== target)!;
 
 describe('MiniGame', () => {
@@ -49,6 +49,19 @@ describe('MiniGame', () => {
     tap(first);
     expect(screen.getByText(`Paint 2 of ${ALL}`)).toBeInTheDocument();
     expect(currentTarget()).not.toBe(first);
+  });
+
+  it('calls each place out big first, then moves it up into the top bar', () => {
+    render(<MiniGame region={region} onExit={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /start painting/i }));
+    const name = currentTarget();
+    // Callout in the middle of the map; the bar copy is still hidden
+    expect(screen.getAllByText(name)).toHaveLength(2);
+    expect(screen.getByText(name, { selector: '[aria-live] span' })).toHaveClass('opacity-0');
+
+    act(() => vi.advanceTimersByTime(1500));
+    expect(screen.getAllByText(name)).toHaveLength(1);
+    expect(screen.getByText(name, { selector: '[aria-live] span' })).not.toHaveClass('opacity-0');
   });
 
   it('costs a life on a wrong tap without naming it, and ends after three', () => {

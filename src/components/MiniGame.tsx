@@ -70,6 +70,25 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
   const target = targets[step];
   const goal = targets.length || projected?.shapes.length || 0;
   const hearts = PAINT_LIVES;
+
+  // Each new place is first called out big in the middle of the map, then flies up
+  // into the top bar (a stronger call to action than just changing the bar text).
+  const [callout, setCallout] = useState<{ name: string; flying: boolean } | null>(null);
+  useEffect(() => {
+    if (phase !== 'playing' || !target) {
+      setCallout(null);
+      return;
+    }
+    setCallout({ name: target.name, flying: false });
+    const fly = setTimeout(() => setCallout(c => (c && c.name === target.name ? { ...c, flying: true } : c)), 950);
+    const done = setTimeout(() => setCallout(c => (c && c.name === target.name ? null : c)), 1400);
+    return () => {
+      clearTimeout(fly);
+      clearTimeout(done);
+    };
+  }, [phase, target]);
+  /** The bar shows the name once the callout has flown up into it */
+  const barNameReady = !callout || callout.name !== target?.name;
   const placeWord = region.source === 'us-states' ? 'state' : 'country';
 
   const start = () => {
@@ -300,7 +319,14 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
               {phase === 'playing' ? `Paint ${Math.min(step + 1, goal)} of ${goal}` : region.name}
             </div>
             <div className="truncate font-display text-lg font-bold leading-tight text-ink sm:text-xl" aria-live="polite">
-              {phase === 'playing' && target ? target.name : region.title}
+              {phase === 'playing' && target ? (
+                // Kept in the DOM for screen readers; shown once the callout lands here
+                <span key={`${target.iso}-${barNameReady}`} className={barNameReady ? 'inline-block animate-pop' : 'opacity-0'}>
+                  {target.name}
+                </span>
+              ) : (
+                region.title
+              )}
             </div>
           </div>
           <div className="flex shrink-0 gap-0.5" aria-label={`${hearts - mistakes} of ${hearts} lives left`} role="img">
@@ -385,6 +411,24 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
             </svg>
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-ink-soft">Unrolling the map…</div>
+          )}
+
+          {/* Callout: the place to paint, big in the middle, then flying up into the bar */}
+          {callout && (
+            <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+              <div
+                className={`atlas-card px-7 py-4 text-center ${callout.flying ? '' : 'animate-pop'}`}
+                style={{
+                  transition: 'transform 420ms cubic-bezier(0.5, 0, 0.75, 0), opacity 420ms ease-in',
+                  transform: callout.flying ? 'translateY(-42vh) scale(0.45)' : 'none',
+                  opacity: callout.flying ? 0 : 1,
+                }}
+                aria-hidden="true"
+              >
+                <div className="atlas-eyebrow text-compass">Paint</div>
+                <div className="font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">{callout.name}</div>
+              </div>
+            </div>
           )}
 
           {/* Toast */}
