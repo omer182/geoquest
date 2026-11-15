@@ -44,11 +44,11 @@ describe('MiniGame', () => {
   it('paints the called country and moves on to the next one', () => {
     render(<MiniGame region={region} onExit={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: /start painting/i }));
-    expect(screen.getByText(`Paint 1 of ${ALL}`)).toBeInTheDocument();
+    expect(screen.getByText(`1 of ${ALL}`)).toBeInTheDocument();
 
     const first = currentTarget();
     tap(first);
-    expect(screen.getByText(`Paint 2 of ${ALL}`)).toBeInTheDocument();
+    expect(screen.getByText(`2 of ${ALL}`)).toBeInTheDocument();
     expect(currentTarget()).not.toBe(first);
   });
 
@@ -93,7 +93,7 @@ describe('MiniGame', () => {
     act(() => vi.advanceTimersByTime(5000));
 
     const last = currentTarget();
-    expect(screen.getByText(`Paint ${ALL} of ${ALL}`)).toBeInTheDocument();
+    expect(screen.getByText(`${ALL} of ${ALL}`)).toBeInTheDocument();
     expect(screen.queryByText(/region painted!/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: last })).toHaveAttribute('fill', '#F4E7C5'); // still unpainted
 

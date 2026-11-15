@@ -180,18 +180,9 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
         </button>
         <div className="hud-card flex min-w-0 flex-1 items-center justify-between gap-2 px-3 py-1.5">
           <div className="min-w-0">
-            <div className="atlas-eyebrow leading-tight">
-              {phase === 'playing' ? `Paint ${Math.min(step + 1, goal)} of ${goal}` : region.name}
-            </div>
-            <div className="truncate font-display text-lg font-bold leading-tight text-ink sm:text-xl" aria-live="polite">
-              {phase === 'playing' && target ? (
-                // Kept in the DOM for screen readers; shown once the callout lands here
-                <span key={`${target.iso}-${barNameReady}`} className={barNameReady ? 'inline-block animate-pop' : 'opacity-0'}>
-                  {target.name}
-                </span>
-              ) : (
-                region.title
-              )}
+            <div className="atlas-eyebrow leading-tight">{region.name}</div>
+            <div className="truncate font-display text-lg font-bold leading-tight text-ink sm:text-xl">
+              {phase === 'playing' ? `${Math.min(step + 1, goal)} of ${goal}` : region.title}
             </div>
           </div>
           <div className="flex shrink-0 gap-0.5" aria-label={`${hearts - mistakes} of ${hearts} lives left`} role="img">
@@ -203,15 +194,34 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
         <MuteButton />
       </div>
 
-      {/* Progress */}
+      {/* The place to paint: a bold banner, with the colour it will be painted and the progress */}
       {phase === 'playing' && (
-        <div className="relative z-20 mx-3 mt-2 flex items-center gap-2 sm:mx-4" aria-hidden="true">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-paper-line">
-            <div className="h-full rounded-full bg-moss transition-all duration-300" style={{ width: `${goal ? (step / goal) * 100 : 0}%` }} />
+        <div className="relative z-20 mx-3 mt-2 overflow-hidden rounded-xl bg-ink shadow-lg sm:mx-4">
+          <div className="flex items-center gap-3 px-4 pb-2 pt-2.5">
+            <span
+              key={target?.iso}
+              className="h-9 w-9 shrink-0 animate-pop rounded-full shadow-inner ring-2 ring-paper/80"
+              style={{ background: target?.paint ?? '#F4E7C5' }}
+              aria-hidden="true"
+            />
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-brass-light">Tap to paint</div>
+              <div className="truncate font-display text-2xl font-bold leading-tight text-paper sm:text-3xl" aria-live="polite">
+                {target && (
+                  // Kept in the DOM for screen readers; shown once the callout lands here
+                  <span key={`${target.iso}-${barNameReady}`} className={barNameReady ? 'inline-block animate-pop' : 'opacity-0'}>
+                    {target.name}
+                  </span>
+                )}
+              </div>
+            </div>
+            <span className="shrink-0 text-xs font-semibold tabular-nums text-paper/70" aria-hidden="true">
+              {step}/{goal}
+            </span>
           </div>
-          <span className="text-[11px] font-semibold tabular-nums text-ink-soft">
-            {step}/{goal}
-          </span>
+          <div className="h-1 bg-paper/15" aria-hidden="true">
+            <div className="h-full bg-moss-light transition-all duration-300" style={{ width: `${goal ? (step / goal) * 100 : 0}%` }} />
+          </div>
         </div>
       )}
 
@@ -296,7 +306,7 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
                 className={`atlas-card px-7 py-4 text-center ${callout.flying ? '' : 'animate-pop'}`}
                 style={{
                   transition: 'transform 420ms cubic-bezier(0.5, 0, 0.75, 0), opacity 420ms ease-in',
-                  transform: callout.flying ? 'translateY(-42vh) scale(0.45)' : 'none',
+                  transform: callout.flying ? 'translateY(-36vh) scale(0.55)' : 'none',
                   opacity: callout.flying ? 0 : 1,
                 }}
                 aria-hidden="true"
