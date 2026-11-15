@@ -6,6 +6,8 @@
 html,
 body {
   height: 100%;
+  /* The visible screen: on phones, excludes the browser's toolbars (100% / 100vh can include them) */
+  height: 100dvh;
   overflow: hidden;
   position: fixed;
   width: 100%;
@@ -13,6 +15,7 @@ body {
 
 #root {
   height: 100%;
+  height: 100dvh;
   overflow: hidden;
   position: fixed;
   width: 100%;

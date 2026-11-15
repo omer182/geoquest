@@ -118,7 +118,7 @@ function AppContent() {
 
     case 'paint-game':
       return paintRegion ? (
-        <div className="h-screen">
+        <div className="h-full">
           <MiniGame
             key={paintRegion}
             region={getRegion(paintRegion)}

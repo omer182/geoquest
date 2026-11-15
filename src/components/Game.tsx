@@ -601,7 +601,7 @@ function GameContent({ onBackToMainMenu, onBackToLobby }: GameProps) {
   }, [levelFailed, state.gameStatus]);
 
     return (
-      <div className="h-screen bg-paper-deep flex flex-col relative overflow-hidden">
+      <div className="h-full bg-paper-deep flex flex-col relative overflow-hidden">
       <div className="relative z-10 flex flex-col h-full overflow-hidden">
       {/* READY State: journey map */}
       {state.gameStatus === GameStatus.READY && state.gameMode === 'single-player' && (
