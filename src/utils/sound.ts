@@ -1,8 +1,8 @@
 /**
  * Game sounds, synthesised with the Web Audio API (no audio files to load or license).
  *
- * The AudioContext is created lazily on the first sound, which always follows a
- * user gesture (a tap or key press), so mobile browsers allow it. Mute is a
+ * The AudioContext is created and unlocked on the first tap (see unlockAudio),
+ * which mobile Safari requires before any sound can play. Mute is a
  * per-browser preference. Every call is a no-op when audio is unavailable
  * (tests, old browsers) or muted.
  */
@@ -28,6 +28,8 @@ export function isMuted(): boolean {
 
 export function setMuted(value: boolean): void {
   muted = value;
+  if (value) setAudioSession('auto');
+  else unlockAudio();
   try {
     localStorage.setItem(MUTE_KEY, value ? '1' : '0');
   } catch {
@@ -41,25 +43,79 @@ export function onMuteChange(fn: (muted: boolean) => void): () => void {
   return () => listeners.delete(fn);
 }
 
-function audio(): { ctx: AudioContext; out: GainNode } | null {
-  if (muted) return null;
-  if (!ctx) {
-    const Ctor =
-      typeof window !== 'undefined'
-        ? window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-        : undefined;
-    if (!Ctor) return null;
+/**
+ * Safari (iOS 16.4+) audio session. "playback" lets game sounds play even with the
+ * iPhone's silent switch on (the default category is muted by it); "auto" hands
+ * control back when the player mutes the game.
+ */
+function setAudioSession(type: 'playback' | 'auto') {
+  try {
+    const session = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
+    if (session && session.type !== type) session.type = type;
+  } catch {
+    /* not supported */
+  }
+}
+
+function createContext(): AudioContext | null {
+  if (ctx) return ctx;
+  const Ctor =
+    typeof window !== 'undefined'
+      ? window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      : undefined;
+  if (!Ctor) return null;
+  try {
+    ctx = new Ctor();
+    master = ctx.createGain();
+    master.gain.value = 0.35;
+    master.connect(ctx.destination);
+  } catch {
+    ctx = null;
+  }
+  return ctx;
+}
+
+let unlocked = false;
+
+/**
+ * Mobile Safari only lets Web Audio start inside a tap. Most game sounds play
+ * later from timers (score ticks, stars, fanfares), so on every tap we make sure
+ * the context exists and is running, and the first time we also play a silent
+ * buffer, which is what actually unlocks output on iOS.
+ */
+export function unlockAudio(): void {
+  if (muted) return;
+  setAudioSession('playback');
+  const c = createContext();
+  if (!c) return;
+  // iOS can also report a non-standard "interrupted" state (after a call, or backgrounding)
+  if (c.state !== 'running') void c.resume().catch(() => {});
+  if (!unlocked) {
     try {
-      ctx = new Ctor();
-      master = ctx.createGain();
-      master.gain.value = 0.35;
-      master.connect(ctx.destination);
+      const buffer = c.createBuffer(1, 1, 22050);
+      const src = c.createBufferSource();
+      src.buffer = buffer;
+      src.connect(c.destination);
+      src.start(0);
+      unlocked = true;
     } catch {
-      return null;
+      /* try again on the next tap */
     }
   }
-  if (ctx.state === 'suspended') void ctx.resume();
-  return { ctx, out: master! };
+}
+
+if (typeof window !== 'undefined') {
+  for (const type of ['pointerdown', 'touchend', 'keydown'] as const) {
+    window.addEventListener(type, unlockAudio, { capture: true, passive: true });
+  }
+}
+
+function audio(): { ctx: AudioContext; out: GainNode } | null {
+  if (muted) return null;
+  const c = createContext();
+  if (!c) return null;
+  if (c.state !== 'running') void c.resume().catch(() => {});
+  return { ctx: c, out: master! };
 }
 
 interface ToneOptions {
