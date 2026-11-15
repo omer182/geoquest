@@ -1,17 +1,21 @@
 import AtlasScreen, { CompassRose } from './ui/AtlasScreen';
+import { loadDay, localDate } from '../utils/roadTrip';
 
 interface MainMenuProps {
   onSinglePlayer: () => void;
   onMultiplayer: () => void;
   onPaintTheMap: () => void;
+  onRoadTrip: () => void;
   onAbout: () => void;
 }
 
 /**
  * MainMenu component - Entry point for choosing game mode
- * Options: My Journey, Paint the Map (mini games), Online Battle, and About
+ * Options: My Journey, Paint the Map (mini games), the daily Road Trip, Online Battle, and About
  */
-export default function MainMenu({ onSinglePlayer, onMultiplayer, onPaintTheMap, onAbout }: MainMenuProps) {
+export default function MainMenu({ onSinglePlayer, onMultiplayer, onPaintTheMap, onRoadTrip, onAbout }: MainMenuProps) {
+  const today = loadDay(localDate());
+  const tripDone = today?.status === 'won' || today?.status === 'lost';
   return (
     <AtlasScreen>
       {/* Wordmark */}
@@ -43,6 +47,24 @@ export default function MainMenu({ onSinglePlayer, onMultiplayer, onPaintTheMap,
               Paint the Map
             </span>
             <span aria-hidden="true" className="text-white/70">→</span>
+          </button>
+
+          {/* Road Trip (daily puzzle) */}
+          <button onClick={onRoadTrip} className="btn btn-sea btn-block justify-between">
+            <span className="flex items-center gap-2.5">
+              <span aria-hidden="true" className="text-lg">🚗</span>
+              Road Trip
+            </span>
+            <span className="flex items-center gap-2">
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                  tripDone ? 'bg-white/20 text-white' : 'bg-brass-light text-ink'
+                }`}
+              >
+                {tripDone ? (today?.status === 'won' ? 'Done' : 'Tomorrow') : 'Today'}
+              </span>
+              <span aria-hidden="true" className="text-white/70">→</span>
+            </span>
           </button>
 
           {/* Online Battle Button */}

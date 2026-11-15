@@ -26,7 +26,7 @@ export interface Shape {
 }
 
 /** Equirectangular projection of a region's places, corrected for latitude. */
-export function projectRegion(region: Region, countries: CountryFeature[]): { shapes: Shape[]; viewH: number } {
+export function projectRegion(region: Pick<Region, 'bounds' | 'codes' | 'merge'>, countries: CountryFeature[]): { shapes: Shape[]; viewH: number } {
   const { west, east, south, north } = region.bounds;
   const kx = Math.cos((((north + south) / 2) * Math.PI) / 180);
   const unit = VIEW_W / ((east - west) * kx);

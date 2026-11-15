@@ -122,6 +122,17 @@ body {
     @apply bg-[#447d4f];
   }
 
+  /* Deep sea blue for the daily Road Trip */
+  .btn-sea {
+    @apply bg-sea-deep text-white;
+    box-shadow:
+      0 2px 0 #1f4d6c,
+      0 8px 18px -8px rgba(47, 111, 154, 0.8);
+  }
+  .btn-sea:not(:disabled):hover {
+    @apply bg-[#29618a];
+  }
+
   /* Paper button with a hairline border */
   .btn-secondary {
     @apply border border-paper-edge/80 bg-paper text-ink;

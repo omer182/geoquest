@@ -8,6 +8,7 @@ import JoinRoom from './components/JoinRoom';
 import RoomLobby from './components/RoomLobby';
 import PaintTheMapMenu from './components/PaintTheMapMenu';
 import MiniGame from './components/MiniGame';
+import RoadTrip from './components/RoadTrip';
 import { getRegion, type RegionId } from './data/regions';
 import { loadProgress } from './utils/progress';
 import { WebSocketProvider } from './context/WebSocketContext';
@@ -24,6 +25,7 @@ type AppScreen =
   | 'game'
   | 'paint-menu'
   | 'paint-game'
+  | 'road-trip'
   | 'about';
 
 /**
@@ -101,6 +103,7 @@ function AppContent() {
           onSinglePlayer={handleSinglePlayer}
           onMultiplayer={handleMultiplayer}
           onPaintTheMap={handlePaintTheMap}
+          onRoadTrip={() => setCurrentScreen('road-trip')}
           onAbout={handleAbout}
         />
       );
@@ -127,6 +130,13 @@ function AppContent() {
           />
         </div>
       ) : null;
+
+    case 'road-trip':
+      return (
+        <div className="h-full">
+          <RoadTrip onExit={() => setCurrentScreen('main-menu')} />
+        </div>
+      );
 
     case 'multiplayer-submenu':
       return (
@@ -176,7 +186,7 @@ function AppContent() {
       );
 
     default:
-      return <MainMenu onSinglePlayer={handleSinglePlayer} onMultiplayer={handleMultiplayer} onPaintTheMap={handlePaintTheMap} onAbout={handleAbout} />;
+      return <MainMenu onSinglePlayer={handleSinglePlayer} onMultiplayer={handleMultiplayer} onPaintTheMap={handlePaintTheMap} onRoadTrip={() => setCurrentScreen('road-trip')} onAbout={handleAbout} />;
   }
 }
 
