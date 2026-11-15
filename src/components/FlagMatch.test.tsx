@@ -5,10 +5,9 @@ import FlagMatch from './FlagMatch';
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }));
 
 const route = ['ES', 'FR', 'DE'];
-const EMOJI: Record<string, string> = { ES: '🇪🇸', FR: '🇫🇷', DE: '🇩🇪' };
-
-/** The tray button showing a country's flag */
-const flagButton = (iso: string) => screen.getAllByRole('button', { name: /^Flag \d+$/ }).find(b => b.textContent === EMOJI[iso])!;
+/** The tray button showing a country's flag (by its image file) */
+const flagButton = (iso: string) =>
+  screen.getAllByRole('button', { name: /^Flag \d+$/ }).find(b => b.querySelector('img')?.getAttribute('src')?.includes(`/${iso.toLowerCase()}.svg`))!;
 const stop = (name: string) => screen.getByRole('button', { name: new RegExp(name) });
 
 describe('FlagMatch', () => {

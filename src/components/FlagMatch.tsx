@@ -127,7 +127,7 @@ export default function FlagMatch({ route, onDone, onClose }: FlagMatchProps) {
                 <span
                   className={`flex h-9 w-12 items-center justify-center rounded-md ${done ? '' : 'border-2 border-dashed border-paper-edge/70'}`}
                 >
-                  {done && <Flag iso={iso} className="animate-pop text-3xl" />}
+                  {done && <Flag iso={iso} className="h-8 w-[2.75rem] animate-pop" />}
                 </span>
               </button>
             </li>
@@ -149,7 +149,7 @@ export default function FlagMatch({ route, onDone, onClose }: FlagMatchProps) {
                   pickedFlag === iso ? 'scale-110 border-sea-deep shadow-md' : 'border-paper-line'
                 }`}
               >
-                <Flag iso={iso} className="text-4xl" />
+                <Flag iso={iso} className="h-9 w-12" />
               </button>
             )
           )}
