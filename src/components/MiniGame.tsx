@@ -372,19 +372,34 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
                   const f = flash?.iso === s.iso ? flash.kind : null;
                   const fill = f === 'wrong' ? '#E07A6A' : isPainted ? s.paint : f === 'reveal' ? '#FBF6EA' : LAND;
                   return (
-                    <path
-                      key={s.iso}
-                      data-iso={s.iso}
-                      d={s.d}
-                      fill={fill}
-                      stroke={f === 'reveal' ? '#C8553D' : '#B39D72'}
-                      strokeWidth={f === 'reveal' ? 3 : 1}
-                      vectorEffect="non-scaling-stroke"
-                      strokeLinejoin="round"
-                      className={`cursor-pointer transition-[fill] duration-300 ${f === 'reveal' ? 'animate-pulse' : ''}`}
-                      role="button"
-                      aria-label={s.name}
-                    />
+                    <g key={s.iso}>
+                      <path
+                        data-iso={s.iso}
+                        d={s.d}
+                        fill={fill}
+                        stroke={f === 'reveal' ? '#C8553D' : '#B39D72'}
+                        strokeWidth={f === 'reveal' ? 3 : 1}
+                        vectorEffect="non-scaling-stroke"
+                        strokeLinejoin="round"
+                        className={`cursor-pointer transition-[fill] duration-300 ${f === 'reveal' ? 'animate-pulse' : ''}`}
+                        role="button"
+                        aria-label={s.name}
+                      />
+                      {s.mergedD && (
+                        // Part of this place: same fill, and a matching edge that hides the old inner border
+                        <path
+                          data-iso={s.iso}
+                          d={s.mergedD}
+                          fill={fill}
+                          stroke={fill}
+                          strokeWidth={2.5}
+                          vectorEffect="non-scaling-stroke"
+                          strokeLinejoin="round"
+                          className="cursor-pointer transition-[fill,stroke] duration-300"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </g>
                   );
                 })}
                 {/* Names on painted countries big enough to hold them */}

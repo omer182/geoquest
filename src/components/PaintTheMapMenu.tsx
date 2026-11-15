@@ -19,9 +19,15 @@ function RegionThumb({ region, features, painted }: { region: Region; features: 
   if (!projected) return <div className="h-full w-full animate-pulse rounded-md bg-paper-line/50" />;
   return (
     <svg viewBox={`0 0 ${VIEW_W} ${projected.viewH}`} className="h-full w-full" aria-hidden="true">
-      {projected.shapes.map(s => (
-        <path key={s.iso} d={s.d} fill={painted ? s.paint : LAND} stroke="#B39D72" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-      ))}
+      {projected.shapes.map(s => {
+        const fill = painted ? s.paint : LAND;
+        return (
+          <g key={s.iso}>
+            <path d={s.d} fill={fill} stroke="#B39D72" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+            {s.mergedD && <path d={s.mergedD} fill={fill} stroke={fill} strokeWidth="2" vectorEffect="non-scaling-stroke" />}
+          </g>
+        );
+      })}
     </svg>
   );
 }

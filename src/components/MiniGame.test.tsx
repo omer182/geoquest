@@ -6,6 +6,7 @@ import MiniGame from './MiniGame';
 import { getRegion, REGIONS, getPaintStars, PAINT_LIVES } from '../data/regions';
 import { loadProgress } from '../utils/progress';
 import type { CountryFeature } from '../utils/countryShapes';
+import { projectRegion } from '../utils/regionProjection';
 
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }));
 
@@ -130,6 +131,25 @@ describe('regions', () => {
   it('has a real map to paint in every region, with three strikes on each', () => {
     for (const r of REGIONS) expect(r.codes.length, r.id).toBeGreaterThanOrEqual(10);
     expect(PAINT_LIVES).toBe(3); // three strikes on every map, big or small
+  });
+
+  it('draws the West Bank and Gaza as part of Israel, with no separate Palestine', () => {
+    const geo = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../assets/geo/countries-low.geojson'), 'utf8'));
+    const features: CountryFeature[] = geo.features.map(
+      (f: { properties: { NAME: string; ISO_A2_EH: string; MAPCOLOR7: number }; geometry: { type: string; coordinates: unknown } }) => ({
+        name: f.properties.NAME,
+        iso: f.properties.ISO_A2_EH,
+        color: f.properties.MAPCOLOR7,
+        polygons: f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates,
+      })
+    );
+    const merged = projectRegion(region, features).shapes;
+    const plain = projectRegion({ ...region, merge: undefined }, features).shapes;
+    expect(merged.some(s => s.iso === 'PS')).toBe(false);
+    // Israel carries the merged area and is drawn first, so neighbours' borders go over it
+    expect(merged[0].iso).toBe('IL');
+    expect(merged[0].mergedD).toMatch(/^M/);
+    expect(plain.find(s => s.iso === 'IL')!.mergedD).toBeUndefined();
   });
 
   it('gives 3/2/1 stars for 0/1/2 mistakes and none for a loss', () => {

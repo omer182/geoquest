@@ -16,6 +16,8 @@ export interface Region {
   /** Which outlines to draw: countries (codes are ISO alpha-2) or US states (codes are state names) */
   source: ShapeSource;
   codes: readonly string[];
+  /** Outlines drawn as part of another place: { source code: place it belongs to } */
+  merge?: Readonly<Record<string, string>>;
   /** Map window in degrees */
   bounds: { west: number; east: number; south: number; north: number };
 }
@@ -30,6 +32,8 @@ export const REGIONS: readonly Region[] = [
     title: 'Paint the Middle East',
     source: 'countries',
     codes: 'BH EG IR IQ IL JO KW LB OM QA SA SY TR AE YE CY'.split(' '),
+    // The West Bank and Gaza are drawn as part of Israel, so the map has no gap there
+    merge: { PS: 'IL' },
     bounds: { west: 24, east: 64, south: 11, north: 43 },
   },
   {
