@@ -54,6 +54,10 @@ describe('RoadTrip', () => {
     expect(screen.getByText(/you made it/i)).toBeInTheDocument();
     expect(screen.getByRole('img', { name: '2 of 3 stars' })).toBeInTheDocument(); // one extra stop
     expect(loadDay('2026-11-15')).toMatchObject({ status: 'won', stars: 2, guesses: ['CH', 'FR'] });
+    // The shortest way is shown, with the flag round after it
+    expect(screen.getByText('Spain → France → Germany')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /flag match/i }));
+    expect(screen.getByRole('list', { name: "Today's route" })).toBeInTheDocument();
   });
 
   it('ends the trip on the third country off the route and shows a shortest way', () => {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { Star } from './ui/Star';
+import FlagMatch from './FlagMatch';
 import MuteButton from './MuteButton';
 import { useShapes, type CountryFeature, type Ring } from '../utils/countryShapes';
 import { projectRegion, VIEW_W } from '../utils/regionProjection';
@@ -19,6 +20,7 @@ import {
   oneShortestRoute,
   roadTripStreak,
   saveDay,
+  saveFlagStars,
   shortestRouteCountries,
   suggestCountries,
   type Puzzle,
@@ -129,6 +131,8 @@ export default function RoadTrip({ onExit, puzzle: given }: RoadTripProps) {
   const [stars, setStars] = useState(saved?.stars ?? 0);
   const [landed, setLanded] = useState(saved && saved.status !== 'playing' ? saved.stars : 0);
   const [cardOpen, setCardOpen] = useState(true);
+  const [flagStars, setFlagStars] = useState(saved?.flagStars ?? 0);
+  const [flagOpen, setFlagOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
@@ -168,7 +172,9 @@ export default function RoadTrip({ onExit, puzzle: given }: RoadTripProps) {
   const k = map.unitsPerPx;
   const shapeOf = (iso: string) => projected?.shapes.find(s => s.iso === iso);
 
-  const revealed = useMemo(() => (phase === 'lost' ? new Set(oneShortestRoute(route).slice(1, -1)) : new Set<string>()), [phase, route]);
+  // Once the day is over, the shortest way is shown on the map
+  const shortest = useMemo(() => oneShortestRoute(route), [route]);
+  const revealed = useMemo(() => (finished ? new Set(shortest.slice(1, -1)) : new Set<string>()), [finished, shortest]);
   const fillFor = (iso: string) => {
     if (iso === route.start) return C.start;
     if (iso === route.end) return C.end;
@@ -269,6 +275,24 @@ export default function RoadTrip({ onExit, puzzle: given }: RoadTripProps) {
   const dateLabel = new Date(`${puzzle.date}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   const streak = finished ? roadTripStreak(puzzle.date) : 0;
   const shapes = projected?.shapes ?? [];
+  const flagButtons = (
+    <div className="mt-4 space-y-2">
+      <button onClick={() => setFlagOpen(true)} className="btn btn-success btn-block justify-between text-base">
+        <span>Bonus: Flag Match</span>
+        {flagStars > 0 ? (
+          <span className="flex gap-0.5 text-white/90" role="img" aria-label={`best ${flagStars} of 3 stars`}>
+            {[0, 1, 2].map(i => <Star key={i} filled={i < flagStars} className="h-4 w-4" />)}
+          </span>
+        ) : (
+          <span aria-hidden="true" className="text-white/70">→</span>
+        )}
+      </button>
+      <div className="flex gap-2">
+        <button onClick={() => setCardOpen(false)} className="btn btn-secondary flex-1 text-sm">See the map</button>
+        <button onClick={onExit} className="btn btn-secondary flex-1 text-sm">Main Menu</button>
+      </div>
+    </div>
+  );
   const labelled = new Set([route.start, route.end]);
 
   return (
@@ -489,11 +513,10 @@ export default function RoadTrip({ onExit, puzzle: given }: RoadTripProps) {
                   {guesses.length} {guesses.length === 1 ? 'stop' : 'stops'}, fewest possible {fewest}.
                   {streak > 1 && <span className="font-semibold text-ink"> {streak} days in a row!</span>}
                 </p>
-                <p className="mt-1 text-xs text-ink-faint">Next trip in {untilMidnight()}</p>
-                <div className="mt-4 space-y-2">
-                  <button onClick={() => setCardOpen(false)} className="btn btn-secondary btn-block text-sm">See the map</button>
-                  <button onClick={onExit} className="btn btn-sea btn-block text-base">Main Menu</button>
-                </div>
+                <p className="mt-3 text-xs text-ink-soft">The shortest way</p>
+                <p className="mt-0.5 text-sm font-semibold leading-relaxed text-ink">{shortest.map(countryName).join(' → ')}</p>
+                <p className="mt-2 text-xs text-ink-faint">Next trip in {untilMidnight()}</p>
+                {flagButtons}
               </>
             )}
             {phase === 'lost' && (
@@ -501,16 +524,24 @@ export default function RoadTrip({ onExit, puzzle: given }: RoadTripProps) {
                 <div className="atlas-eyebrow mb-1">Road Trip · {dateLabel}</div>
                 <h2 className="font-display text-3xl font-bold text-ink">Out of fuel!</h2>
                 <p className="mt-2 text-sm text-ink-soft">One shortest way was</p>
-                <p className="mt-1 text-sm font-semibold leading-relaxed text-ink">{oneShortestRoute(route).map(countryName).join(' → ')}</p>
+                <p className="mt-1 text-sm font-semibold leading-relaxed text-ink">{shortest.map(countryName).join(' → ')}</p>
                 <p className="mt-2 text-xs text-ink-faint">Next trip in {untilMidnight()}</p>
-                <div className="mt-4 space-y-2">
-                  <button onClick={() => setCardOpen(false)} className="btn btn-secondary btn-block text-sm">See the map</button>
-                  <button onClick={onExit} className="btn btn-sea btn-block text-base">Main Menu</button>
-                </div>
+                {flagButtons}
               </>
             )}
           </div>
         </div>
+      )}
+
+      {flagOpen && (
+        <FlagMatch
+          route={shortest}
+          onDone={s => {
+            saveFlagStars(puzzle.date, s);
+            setFlagStars(f => Math.max(f, s));
+          }}
+          onClose={() => setFlagOpen(false)}
+        />
       )}
     </div>
   );

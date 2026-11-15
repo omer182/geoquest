@@ -9,7 +9,7 @@ export const ROAD_TRIP_STRIKES = 3;
 /** A country is "close" (yellow) when a route through it is at most this many countries longer */
 export const NEAR_SLACK = 2;
 /** Countries between start and end on the shortest route: long trips across a continent */
-export const MIN_BETWEEN = 8;
+export const MIN_BETWEEN = 7;
 export const MAX_BETWEEN = 12;
 /** Never a start or end: too small to see, or disputed */
 const NOT_ENDPOINTS = new Set(['VA', 'SM', 'MC', 'LI', 'AD', 'LU', 'XK', 'EH']);
@@ -237,6 +237,20 @@ export interface DayRecord {
   guesses: string[];
   status: 'playing' | 'won' | 'lost';
   stars: number;
+  /** Stars from the flag round played after the trip, once played */
+  flagStars?: number;
+}
+
+/** Flag round stars: no mistakes 3, one or two 2, more 1 */
+export function getFlagStars(mistakes: number): number {
+  return mistakes === 0 ? 3 : mistakes <= 2 ? 2 : 1;
+}
+
+/** Record the flag round on a finished day (keeps the best result). */
+export function saveFlagStars(date: string, stars: number): void {
+  const day = loadDay(date);
+  if (!day) return;
+  saveDay(date, { ...day, flagStars: Math.max(day.flagStars ?? 0, stars) });
 }
 
 interface Saved { days: Record<string, DayRecord> }
