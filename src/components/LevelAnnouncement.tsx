@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface LevelAnnouncementProps {
   level: number;
@@ -23,8 +23,14 @@ interface LevelAnnouncementProps {
  */
 export default function LevelAnnouncement({ level, round, onComplete }: LevelAnnouncementProps) {
   const [isVisible, setIsVisible] = useState(true);
+  // Parents pass a fresh callback on every render; keep the latest one in a ref so a
+  // re-render (e.g. a socket reconnect attempt) doesn't restart the timers and leave
+  // the card stuck on screen.
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
+    setIsVisible(true);
     // Start fade out after 1.5 seconds (added 1s from previous 0.5s)
     const fadeOutTimer = setTimeout(() => {
       setIsVisible(false);
@@ -32,16 +38,14 @@ export default function LevelAnnouncement({ level, round, onComplete }: LevelAnn
 
     // Call onComplete after fade out animation completes (300ms)
     const completeTimer = setTimeout(() => {
-      if (onComplete) {
-        onComplete();
-      }
+      onCompleteRef.current?.();
     }, 1800); // Added 1s from previous 800ms
 
     return () => {
       clearTimeout(fadeOutTimer);
       clearTimeout(completeTimer);
     };
-  }, [level, round, onComplete]);
+  }, [level, round]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
