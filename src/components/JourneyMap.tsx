@@ -280,7 +280,7 @@ function canAnimate(): boolean {
 }
 
 /**
- * Candy-style journey map for the solo run: a made-up world that climbs from
+ * "My Journey": the Candy-style level map: a made-up world that climbs from
  * the Meadowlands to a castle in the sky. Beaten stops show their best stars,
  * the player's pin walks the road to each newly unlocked stop, and
  * "paint the region" bonus stops branch off the road as they unlock.
@@ -378,24 +378,28 @@ export default function JourneyMap({ progress, walkFrom, onPlay, onStartOver, on
 
   return (
     <AtlasScreen widthClass="max-w-md">
-      <div className="absolute right-4 top-4 z-10">
-        <MuteButton />
-      </div>
-
-      <div className="mb-3 text-center">
-        <div className="atlas-eyebrow">Solo Run</div>
-        <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">Your Journey</h1>
-        <div className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold tabular-nums text-ink-soft">
-          <Star filled className="h-4 w-4" />
-          {totalStars} / {maxStars}
+      {/* Compact header so the map and buttons fit a phone screen */}
+      <div className="mb-2.5 flex items-center justify-between gap-2">
+        <div className="w-10" aria-hidden="true" />
+        <div className="text-center">
+          <h1 className="font-display text-2xl font-bold leading-tight text-ink sm:text-3xl">My Journey</h1>
+          <div className="inline-flex items-center gap-1.5 text-sm font-semibold tabular-nums text-ink-soft">
+            <Star filled className="h-4 w-4" />
+            {totalStars} / {maxStars}
+          </div>
         </div>
+        <MuteButton />
       </div>
 
       <div className="atlas-card overflow-hidden p-1.5">
         <div
           ref={scrollRef}
           className="journey-scroll overflow-y-auto overflow-x-hidden rounded-[10px]"
-          style={{ height: 'min(58dvh, 600px)', scrollbarWidth: 'none' }}
+          // Whatever height is left after the header and buttons (fresh players also get a tip line)
+          style={{
+            height: isFresh ? 'clamp(200px, calc(100dvh - 20rem), 600px)' : 'clamp(220px, calc(100dvh - 16.5rem), 600px)',
+            scrollbarWidth: 'none',
+          }}
         >
           <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="group" aria-label="Journey map">
             <defs>

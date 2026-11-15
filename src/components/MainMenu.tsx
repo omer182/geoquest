@@ -9,7 +9,7 @@ interface MainMenuProps {
 
 /**
  * MainMenu component - Entry point for choosing game mode
- * Options: Solo Run, Paint the Map (mini games), Online Battle, and About
+ * Options: My Journey, Paint the Map (mini games), Online Battle, and About
  */
 export default function MainMenu({ onSinglePlayer, onMultiplayer, onPaintTheMap, onAbout }: MainMenuProps) {
   return (
@@ -27,11 +27,11 @@ export default function MainMenu({ onSinglePlayer, onMultiplayer, onPaintTheMap,
 
       <div className="atlas-card p-5">
         <div className="space-y-2.5">
-          {/* Solo Run Button */}
+          {/* My Journey (solo levels) */}
           <button onClick={onSinglePlayer} className="btn btn-primary btn-block justify-between">
             <span className="flex items-center gap-2.5">
               <span aria-hidden="true" className="text-lg">🧭</span>
-              Solo Run
+              My Journey
             </span>
             <span aria-hidden="true" className="text-paper/60">→</span>
           </button>
