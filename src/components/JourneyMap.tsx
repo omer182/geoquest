@@ -554,7 +554,8 @@ export default function JourneyMap({ progress, walkFrom, onPlay, onStartOver, on
         </button>
         <div className="flex gap-2">
           {onMainMenu && (
-            <button onClick={onMainMenu} className="btn btn-ghost flex-1 text-sm">
+            <button onClick={onMainMenu} className="btn btn-secondary flex-1 text-sm">
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
               Main Menu
             </button>
           )}

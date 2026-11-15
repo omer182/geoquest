@@ -116,13 +116,13 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
       }
       return;
     }
-    // Wrong country
-    const name = projected?.shapes.find(s => s.iso === iso)?.name ?? 'somewhere else';
+    // Wrong place: flash it red but don't name it, so a miss never gives away an answer
+    const WRONG = 'Wrong, try again';
     const m = mistakes + 1;
     setMistakes(m);
     sfx.wrong();
     setFlash({ iso, kind: 'wrong' });
-    setToast(`That's ${name}`);
+    setToast(WRONG);
     later(() => setFlash(f => (f?.iso === iso && f.kind === 'wrong' ? null : f)), 700);
     if (m >= hearts) {
       later(() => {
@@ -134,7 +134,7 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
         sfx.fail();
       }, 2600);
     } else {
-      later(() => setToast(t => (t === `That's ${name}` ? null : t)), 1600);
+      later(() => setToast(t => (t === WRONG ? null : t)), 1400);
     }
   };
 

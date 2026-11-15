@@ -82,7 +82,8 @@ export default function PaintTheMapMenu({ onPlay, onBack }: PaintTheMapMenuProps
         })}
       </div>
 
-      <button onClick={onBack} className="btn btn-ghost btn-block mt-4 text-sm">
+      <button onClick={onBack} className="btn btn-secondary btn-block mt-4 text-sm">
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
         Main Menu
       </button>
     </AtlasScreen>

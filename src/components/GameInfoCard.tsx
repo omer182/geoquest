@@ -1,5 +1,8 @@
 import { useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
+import { Star } from './ui/Star';
+import { getStarTargets } from '../utils/scoring';
+import { sfx } from '../utils/sound';
 
 /**
  * Props for the GameInfoCard component
@@ -65,49 +68,52 @@ export default function GameInfoCard({
   totalScore,
   requiredScore,
 }: GameInfoCardProps) {
-  // Calculate points needed to advance
-  const pointsNeeded = Math.max(0, requiredScore - totalScore);
-
-  // Calculate progress percentage (0-100)
-  const progressPercentage = Math.min(100, (totalScore / requiredScore) * 100);
+  // Star targets: 1 star = the pass mark, then 2 and 3 stars further up.
+  // The bar runs from 0 to the 3-star score so all three markers sit on it.
+  const targets = getStarTargets(requiredScore);
+  const barMax = targets[2];
+  const starsReached = targets.filter(t => totalScore >= t).length;
+  const passed = starsReached > 0;
+  const progressPercentage = Math.min(100, (totalScore / barMax) * 100);
+  const nextTarget = targets[starsReached];
 
   // Track if confetti has been triggered for this threshold pass
   const confettiTriggeredRef = useRef(false);
 
-  // Function to trigger confetti
   const triggerConfetti = () => {
-    // Small confetti positioned over the progress bar (top-left area)
-    // Using smaller scale and more particles for visibility
+    // Small confetti over the score card
     confetti({
       particleCount: 100,
       spread: 100,
       startVelocity: 20,
-      origin: { x: 0.1, y: 0.15 }, // Positioned over progress bar area
+      origin: { x: 0.1, y: 0.15 },
       colors: ['#C8553D', '#C9962B', '#4E8B5A', '#2F6F9A', '#1E2A44'], // Atlas palette
-      scalar: 0.8, // Smaller scale
-      gravity: 1, // Less gravity for more visible particles
+      scalar: 0.8,
+      gravity: 1,
     });
   };
 
-  // Trigger small confetti when threshold is reached
+  // Celebrate each star as it is reached: a bell per star, confetti on passing
+  const prevStars = useRef(starsReached);
   useEffect(() => {
-    if (pointsNeeded === 0 && !confettiTriggeredRef.current) {
-      confettiTriggeredRef.current = true;
-      triggerConfetti();
-    } else if (pointsNeeded > 0) {
-      // Reset when points needed increases (new level started)
-      confettiTriggeredRef.current = false;
+    if (starsReached > prevStars.current) {
+      sfx.star(starsReached - 1);
+      if (!confettiTriggeredRef.current) {
+        confettiTriggeredRef.current = true;
+        triggerConfetti();
+      }
+    } else if (starsReached === 0) {
+      confettiTriggeredRef.current = false; // new level / retry
     }
-  }, [pointsNeeded]);
+    prevStars.current = starsReached;
+  }, [starsReached]);
 
-  // Handle click to retrigger confetti when threshold is passed
+  // Tap the card to celebrate again once the level is passed
   const handleClick = () => {
-    if (pointsNeeded === 0) {
-      triggerConfetti();
-    }
+    if (passed) triggerConfetti();
   };
 
-  const passed = pointsNeeded === 0;
+  const barColor = starsReached >= 3 ? 'bg-brass' : passed ? 'bg-moss' : 'bg-compass';
 
   return (
     <div
@@ -127,35 +133,57 @@ export default function GameInfoCard({
         </span>
       </div>
 
-      {/* Score against the level target, on one baseline */}
+      {/* Score against the pass mark, on one baseline */}
       <div className="mt-1 flex items-baseline gap-1.5 tabular-nums">
         <span className="font-display text-2xl font-bold leading-none text-ink">{formatNumber(totalScore)}</span>
         <span className="text-sm font-medium text-ink-faint">/ {formatNumber(requiredScore)}</span>
       </div>
 
-      {/* Progress toward the target */}
-      <div
-        className="mt-2 h-2 w-full overflow-hidden rounded-full bg-paper-line"
-        role="progressbar"
-        aria-valuenow={Math.round(progressPercentage)}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label="Progress to the level target"
-      >
+      {/* Progress bar with a star marker at each star target (the first is the pass mark) */}
+      <div className="relative mt-2.5 h-4">
         <div
-          className={`h-full rounded-full transition-all duration-500 ease-out ${passed ? 'bg-moss' : 'bg-compass'}`}
-          style={{ width: `${progressPercentage}%` }}
-        />
+          className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 overflow-hidden rounded-full bg-paper-line"
+          role="progressbar"
+          aria-valuenow={Math.round(progressPercentage)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Progress: ${starsReached} of 3 stars`}
+        >
+          <div
+            className={`h-full rounded-full transition-all duration-500 ease-out ${barColor}`}
+            style={{ width: `${progressPercentage}%` }}
+          />
+        </div>
+        {targets.map((t, i) => {
+          const reached = totalScore >= t;
+          return (
+            <span
+              key={`${i}-${reached}`}
+              className={`absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-paper p-px text-ink-faint shadow-sm ${
+                reached ? 'animate-pop' : ''
+              }`}
+              style={{ left: `${Math.min((t / barMax) * 100, 100)}%` }}
+              title={`${i + 1} star${i ? 's' : ''} at ${formatNumber(t)}${i === 0 ? ' (pass)' : ''}`}
+            >
+              <Star filled={reached} className="h-4 w-4" />
+            </span>
+          );
+        })}
       </div>
 
-      {/* What's left */}
+      {/* What's next */}
       <div className="mt-1.5 text-xs">
-        {passed ? (
-          <span className="font-semibold text-moss">✓ Target reached</span>
-        ) : (
+        {!passed ? (
           <span className="text-ink-soft">
-            <span className="font-semibold tabular-nums text-ink">{formatNumber(pointsNeeded)}</span> to advance
+            <span className="font-semibold tabular-nums text-ink">{formatNumber(requiredScore - totalScore)}</span> to pass
           </span>
+        ) : nextTarget !== undefined ? (
+          <span className="text-ink-soft">
+            <span className="font-semibold text-moss">Passed!</span>{' '}
+            <span className="font-semibold tabular-nums text-ink">{formatNumber(nextTarget - totalScore)}</span> to {starsReached + 1} stars
+          </span>
+        ) : (
+          <span className="font-semibold text-brass">All 3 stars!</span>
         )}
       </div>
     </div>

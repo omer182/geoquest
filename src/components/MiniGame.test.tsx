@@ -51,14 +51,16 @@ describe('MiniGame', () => {
     expect(currentTarget()).not.toBe(first);
   });
 
-  it('costs a life and names the country on a wrong tap, and ends after three', () => {
+  it('costs a life on a wrong tap without naming it, and ends after three', () => {
     render(<MiniGame region={region} onExit={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: /start painting/i }));
 
     const target = currentTarget();
     tap(wrongFor(target));
     expect(screen.getByRole('img', { name: '2 of 3 lives left' })).toBeInTheDocument();
-    expect(screen.getByText(`That's ${wrongFor(target)}`)).toBeInTheDocument();
+    expect(screen.getByText('Wrong, try again')).toBeInTheDocument();
+    // The country tapped by mistake is not named
+    expect(screen.queryByText(new RegExp(wrongFor(target)), { selector: '.animate-pop' })).not.toBeInTheDocument();
 
     act(() => vi.advanceTimersByTime(2000));
     tap(wrongFor(target));
