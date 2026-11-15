@@ -3,7 +3,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import fs from 'node:fs';
 import path from 'node:path';
 import MiniGame from './MiniGame';
-import { getRegion, REGIONS, getPaintStars, PAINT_GOAL } from '../data/regions';
+import { getRegion, REGIONS, getPaintStars, livesFor } from '../data/regions';
 import { loadProgress } from '../utils/progress';
 import type { CountryFeature } from '../utils/countryShapes';
 
@@ -24,6 +24,7 @@ const FAKE: CountryFeature[] = ISO.map((iso, i) => {
 vi.mock('../utils/countryShapes', () => ({ useShapes: () => FAKE }));
 
 const region = getRegion('middle-east');
+const ALL = FAKE.length; // every place must be painted
 
 const tap = (name: string) => {
   const el = screen.getByRole('button', { name });
@@ -42,11 +43,11 @@ describe('MiniGame', () => {
   it('paints the called country and moves on to the next one', () => {
     render(<MiniGame region={region} onExit={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: /start painting/i }));
-    expect(screen.getByText(`Paint 1 of ${PAINT_GOAL}`)).toBeInTheDocument();
+    expect(screen.getByText(`Paint 1 of ${ALL}`)).toBeInTheDocument();
 
     const first = currentTarget();
     tap(first);
-    expect(screen.getByText(`Paint 2 of ${PAINT_GOAL}`)).toBeInTheDocument();
+    expect(screen.getByText(`Paint 2 of ${ALL}`)).toBeInTheDocument();
     expect(currentTarget()).not.toBe(first);
   });
 
@@ -69,13 +70,29 @@ describe('MiniGame', () => {
     expect(loadProgress().mini).toEqual({});
   });
 
-  it('wins after painting the goal, awarding stars by mistakes and saving them', () => {
+  it('never paints anything for you: the game goes on until the last place is tapped', () => {
+    render(<MiniGame region={region} onExit={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /start painting/i }));
+    for (let i = 0; i < ALL - 1; i++) tap(currentTarget());
+    act(() => vi.advanceTimersByTime(5000));
+
+    const last = currentTarget();
+    expect(screen.getByText(`Paint ${ALL} of ${ALL}`)).toBeInTheDocument();
+    expect(screen.queryByText(/region painted!/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: last })).toHaveAttribute('fill', '#F4E7C5'); // still unpainted
+
+    tap(last);
+    act(() => vi.advanceTimersByTime(3000));
+    expect(screen.getByText(/region painted!/i)).toBeInTheDocument();
+  });
+
+  it('wins after painting every place, awarding stars by mistakes and saving them', () => {
     render(<MiniGame region={region} onExit={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: /start painting/i }));
 
     tap(wrongFor(currentTarget())); // one mistake -> 2 stars
     act(() => vi.advanceTimersByTime(2000));
-    for (let i = 0; i < PAINT_GOAL; i++) tap(currentTarget());
+    for (let i = 0; i < ALL; i++) tap(currentTarget());
     act(() => vi.advanceTimersByTime(5000));
 
     expect(screen.getByText(/region painted!/i)).toBeInTheDocument();
@@ -95,14 +112,17 @@ describe('regions', () => {
     }
   });
 
-  it('has enough paintable places in every region', () => {
-    for (const r of REGIONS) expect(r.codes.length, r.id).toBeGreaterThanOrEqual(PAINT_GOAL);
+  it('has a real map to paint in every region, with more lives for the big ones', () => {
+    for (const r of REGIONS) expect(r.codes.length, r.id).toBeGreaterThanOrEqual(10);
+    expect(livesFor(17)).toBe(3);
+    expect(livesFor(48)).toBe(5);
   });
 
-  it('gives 3/2/1 stars for 0/1/2 mistakes and none for a loss', () => {
-    expect(getPaintStars(true, 0)).toBe(3);
-    expect(getPaintStars(true, 1)).toBe(2);
-    expect(getPaintStars(true, 2)).toBe(1);
-    expect(getPaintStars(false, 0)).toBe(0);
+  it('gives stars by mistakes relative to the lives, and none for a loss', () => {
+    // 3 lives: 0 / 1 / 2 mistakes
+    expect([0, 1, 2].map(m => getPaintStars(true, m, 3))).toEqual([3, 2, 1]);
+    // 5 lives: 0 / 1-2 / 3-4 mistakes
+    expect([0, 1, 2, 3, 4].map(m => getPaintStars(true, m, 5))).toEqual([3, 2, 2, 1, 1]);
+    expect(getPaintStars(false, 0, 3)).toBe(0);
   });
 });

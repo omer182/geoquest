@@ -4,7 +4,7 @@ import { Star } from './ui/Star';
 import MuteButton from './MuteButton';
 import { useShapes } from '../utils/countryShapes';
 import { projectRegion, VIEW_W, PAINT, LAND, type Shape } from '../utils/regionProjection';
-import { getPaintStars, MAX_MISTAKES, PAINT_GOAL, type Region } from '../data/regions';
+import { getPaintStars, livesFor, type Region } from '../data/regions';
 import { recordMiniGame } from '../utils/progress';
 import { sfx } from '../utils/sound';
 
@@ -16,8 +16,6 @@ interface MiniGameProps {
   onExit: () => void;
 }
 
-/** Countries whose largest piece is smaller than this (map units) are drawn but never asked */
-const MIN_TARGET_SIZE = 13;
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -47,9 +45,8 @@ function Heart({ full }: { full: boolean }) {
 
 /**
  * "Paint the region" bonus game: only the region's countries are on the map.
- * A country name is called; tap it to paint it in. Paint PAINT_GOAL to win
- * (the rest of the region then fills with colour); the (MAX_MISTAKES+1)th
- * wrong tap ends the game. Stars depend on mistakes.
+ * A place is called; tap it to paint it in. Paint every place in the region
+ * yourself to win; running out of lives (wrong taps) ends the game. Stars depend on mistakes.
  */
 export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProps) {
   const countries = useShapes(region.source);
@@ -71,13 +68,14 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
   const target = targets[step];
-  const goal = Math.min(PAINT_GOAL, targets.length || PAINT_GOAL);
+  const goal = targets.length || projected?.shapes.length || 0;
+  const hearts = livesFor(projected?.shapes.length ?? 0);
+  const placeWord = region.source === 'us-states' ? 'state' : 'country';
 
   const start = () => {
     if (!projected) return;
     sfx.click();
-    const eligible = projected.shapes.filter(s => s.size >= MIN_TARGET_SIZE);
-    setTargets(shuffle(eligible).slice(0, PAINT_GOAL));
+    setTargets(shuffle(projected.shapes));
     setStep(0);
     setPainted(new Set());
     setMistakes(0);
@@ -91,12 +89,7 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
   };
 
   const finishWon = (finalMistakes: number) => {
-    // Cascade-paint the rest of the region
-    const rest = shuffle((projected?.shapes ?? []).map(s => s.iso));
-    rest.forEach((iso, i) =>
-      later(() => setPainted(prev => (prev.has(iso) ? prev : new Set(prev).add(iso))), 250 + i * Math.max(18, 900 / rest.length))
-    );
-    const stars = getPaintStars(true, finalMistakes);
+    const stars = getPaintStars(true, finalMistakes, hearts);
     const newBest = recordMiniGame(region.id, stars);
     later(() => {
       setResult({ stars, newBest });
@@ -104,7 +97,7 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
       sfx.fanfare();
       confetti({ particleCount: 150, spread: 110, startVelocity: 42, origin: { x: 0.5, y: 0.4 }, colors: PAINT, zIndex: 70 });
       for (let i = 0; i < stars; i++) later(() => { setLanded(i + 1); sfx.star(i); }, 500 + i * 420);
-    }, 1300);
+    }, 900);
   };
 
   const tapCountry = (iso: string) => {
@@ -131,7 +124,7 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
     setFlash({ iso, kind: 'wrong' });
     setToast(`That's ${name}`);
     later(() => setFlash(f => (f?.iso === iso && f.kind === 'wrong' ? null : f)), 700);
-    if (m > MAX_MISTAKES) {
+    if (m >= hearts) {
       later(() => {
         setFlash({ iso: target.iso, kind: 'reveal' });
         setToast(`${target.name} was here`);
@@ -291,7 +284,6 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
   }, [projected]);
 
   const shapes = projected?.shapes ?? [];
-  const hearts = MAX_MISTAKES + 1;
 
   return (
     <div className="relative flex h-full flex-col bg-paper-deep">
@@ -320,12 +312,15 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
         <MuteButton />
       </div>
 
-      {/* Progress dots */}
+      {/* Progress */}
       {phase === 'playing' && (
-        <div className="relative z-20 mx-auto mt-2 flex gap-1" aria-hidden="true">
-          {Array.from({ length: goal }, (_, i) => (
-            <span key={i} className={`h-1.5 w-4 rounded-full transition-colors ${i < step ? 'bg-moss' : 'bg-paper-line'}`} />
-          ))}
+        <div className="relative z-20 mx-3 mt-2 flex items-center gap-2 sm:mx-4" aria-hidden="true">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-paper-line">
+            <div className="h-full rounded-full bg-moss transition-all duration-300" style={{ width: `${goal ? (step / goal) * 100 : 0}%` }} />
+          </div>
+          <span className="text-[11px] font-semibold tabular-nums text-ink-soft">
+            {step}/{goal}
+          </span>
         </div>
       )}
 
@@ -423,13 +418,15 @@ export default function MiniGame({ region, bestStars = 0, onExit }: MiniGameProp
                 <div className="atlas-eyebrow mb-1">Paint the Map</div>
                 <h2 className="font-display text-3xl font-bold text-ink">{region.title}</h2>
                 <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-                  We call a {region.source === 'us-states' ? 'state' : 'country'}, you tap it to paint it in. Paint {PAINT_GOAL} to colour the whole region. {hearts} wrong taps
-                  and you&apos;re out.
+                  We call a {placeWord}, you tap it to paint it in. Paint all {projected?.shapes.length ?? ''} {placeWord === 'state' ? 'states' : 'countries'}{' '}
+                  yourself to colour the whole map. {hearts} wrong taps and you&apos;re out.
                 </p>
                 <div className="mt-3 flex justify-center gap-1 text-paper-line">
                   {[0, 1, 2].map(i => <Star key={i} filled={i < bestStars} className="h-7 w-7" />)}
                 </div>
-                <p className="mt-1 text-[11px] text-ink-faint">No mistakes 3★ · one 2★ · two 1★</p>
+                <p className="mt-1 text-[11px] text-ink-faint">
+                  {hearts === 3 ? 'No mistakes 3★ · one 2★ · two 1★' : 'No mistakes 3★ · one or two 2★ · more 1★'}
+                </p>
                 <div className="mt-4 space-y-2">
                   <button onClick={start} disabled={!projected} className="btn btn-accent btn-block text-base">
                     {projected ? 'Start painting' : 'Loading map…'}

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import AtlasScreen, { AtlasHeading } from './ui/AtlasScreen';
 import { Star, StarRow } from './ui/Star';
 import MuteButton from './MuteButton';
-import { REGIONS, PAINT_GOAL, type Region, type RegionId } from '../data/regions';
+import { REGIONS, livesFor, type Region, type RegionId } from '../data/regions';
 import { useShapes, type CountryFeature } from '../utils/countryShapes';
 import { projectRegion, VIEW_W, LAND } from '../utils/regionProjection';
 import { loadProgress } from '../utils/progress';
@@ -44,7 +44,7 @@ export default function PaintTheMapMenu({ onPlay, onBack }: PaintTheMapMenuProps
       <AtlasHeading
         eyebrow="Mini games"
         title="Paint the Map"
-        subtitle={`We call a place, you tap it. Paint ${PAINT_GOAL} to colour the region, 3 wrong taps and you're out.`}
+        subtitle="We call a place, you tap it. Paint every one yourself to colour the whole map. Wrong taps cost a life."
       />
 
       <div className="mb-3 flex justify-center">
@@ -73,6 +73,9 @@ export default function PaintTheMapMenu({ onPlay, onBack }: PaintTheMapMenuProps
               <div className="mt-2 flex items-center justify-between gap-1">
                 <span className="font-display text-base font-bold leading-tight text-ink">{region.name}</span>
                 <StarRow count={stars} className="h-3.5 w-3.5" gap="gap-0" />
+              </div>
+              <div className="text-[11px] text-ink-faint">
+                {region.codes.length} {region.source === 'us-states' ? 'states' : 'countries'} · {livesFor(region.codes.length)} lives
               </div>
             </button>
           );

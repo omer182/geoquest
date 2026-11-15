@@ -37,7 +37,8 @@ export const REGIONS: readonly Region[] = [
     name: 'Europe',
     title: 'Paint Europe',
     source: 'countries',
-    codes: 'AL AD AT BY BE BA BG HR CZ DK EE FI FR DE GR HU IS IE IT XK LV LI LT LU MT MD MC ME NL MK NO PL PT RO RS SK SI ES SE CH GB UA SM VA'.split(' '),
+    // Vatican, Monaco, San Marino, Malta, Liechtenstein and Andorra are too small to tap
+    codes: 'AL AT BY BE BA BG HR CZ DK EE FI FR DE GR HU IS IE IT XK LV LT LU MD ME NL MK NO PL PT RO RS SK SI ES SE CH GB UA'.split(' '),
     bounds: { west: -25, east: 42, south: 34, north: 71.5 },
   },
   {
@@ -70,20 +71,25 @@ export const REGIONS: readonly Region[] = [
     name: 'Africa',
     title: 'Paint Africa',
     source: 'countries',
-    codes: 'DZ AO BJ BW BF BI CV CM CF TD KM CD CG CI DJ EG GQ ER SZ ET GA GM GH GN GW KE LS LR LY MG MW ML MR MU MA MZ NA NE NG RW ST SN SC SL SO ZA SS SD TZ TG TN UG ZM ZW EH'.split(' '),
+    // Island nations too small to tap (Seychelles, Sao Tome, Cabo Verde, Comoros, Mauritius) are left out
+    codes: 'DZ AO BJ BW BF BI CM CF TD CD CG CI DJ EG GQ ER SZ ET GA GM GH GN GW KE LS LR LY MG MW ML MR MA MZ NA NE NG RW SN SL SO ZA SS SD TZ TG TN UG ZM ZW EH'.split(' '),
     bounds: { west: -26, east: 58, south: -36, north: 38 },
   },
 ];
 
 export const getRegion = (id: RegionId): Region => REGIONS.find(r => r.id === id)!;
 
-/** Countries painted to win a region game */
-export const PAINT_GOAL = 10;
-/** Wrong taps allowed; the next one ends the game */
-export const MAX_MISTAKES = 2;
+/** Every place in the region must be painted. Lives (wrong taps allowed) scale with its size. */
+export function livesFor(placeCount: number): number {
+  return placeCount >= 30 ? 5 : 3;
+}
 
-/** Stars for a won region game: no mistakes 3, one 2, two 1. */
-export function getPaintStars(won: boolean, mistakes: number): number {
+/**
+ * Stars for a region game: 3 with no mistakes, 1 when down to the last life,
+ * 2 in between (3 lives: 0/1/2 mistakes = 3/2/1 stars; 5 lives: 0 / 1-2 / 3-4).
+ */
+export function getPaintStars(won: boolean, mistakes: number, lives = 3): number {
   if (!won) return 0;
-  return Math.max(1, 3 - mistakes);
+  if (mistakes === 0) return 3;
+  return mistakes <= Math.floor((lives - 1) / 2) ? 2 : 1;
 }
